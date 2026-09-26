@@ -1,7 +1,13 @@
 'use client';
 
-import { AgroSenseProvider } from './context/agrosense';
+import { AgroSenseProviper } from './context/agrosense';
+import AppNavbar from '@/components/AppNavbar';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  return <AgroSenseProvider>{children}</AgroSenseProvider>;
+  return (
+    <AgroSenseProvider>
+      <AppNavbar />
+      {children}
+    </AgroSenseProvider>
+  );
 }

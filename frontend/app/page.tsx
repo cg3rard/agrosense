@@ -51,45 +51,10 @@ function StatCard({ value, label }: { value: string; label: string }) {
   );
 }
 
-/* ── navbar ──────────────────────────────────────────────────────────────── */
-function Navbar() {
-  return (
-    <nav className="fixed top-0 inset-x-0 z-30 bg-white/75 backdrop-blur-2xl border-b border-[var(--border-subtle)] animate-fade-down">
-      <div className="max-w-6xl mx-auto px-6 h-[52px] flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-[var(--brand)] flex items-center justify-center shadow-sm">
-            <span className="text-white text-xs font-bold select-none">A</span>
-          </div>
-          <span className="text-sm font-semibold text-gray-900 tracking-tight">AgroSense</span>
-        </div>
-
-        {/* Nav links */}
-        <div className="hidden sm:flex items-center gap-6 text-sm text-[var(--fg-secondary)]">
-          <a href="#masalah" className="hover:text-gray-900 transition-colors duration-200">Masalah</a>
-          <a href="#fitur"   className="hover:text-gray-900 transition-colors duration-200">Fitur</a>
-          <a href="#cara-kerja" className="hover:text-gray-900 transition-colors duration-200">Cara Kerja</a>
-        </div>
-
-        {/* CTA */}
-        <Link
-          href="/diagnosis"
-          className="inline-flex items-center gap-1.5 bg-[var(--brand)] hover:bg-[var(--brand-mid)] text-white text-xs font-semibold rounded-full px-4 py-1.5 shadow-sm transition-all duration-200 hover:-translate-y-px active:scale-95"
-        >
-          Mulai Diagnosis <IconArrow />
-        </Link>
-      </div>
-    </nav>
-  );
-}
-
 /* ── page ────────────────────────────────────────────────────────────────── */
 export default function LandingPage() {
   return (
       <div className="min-h-screen flex flex-col">
-
-        <Navbar />
-
         <main className="flex-1">
 
           {/* ══ HERO ════════════════════════════════════════════════════ */}

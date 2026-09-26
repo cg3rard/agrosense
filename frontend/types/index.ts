@@ -5,9 +5,12 @@ export interface AnalyzeResponse {
   roi_status: string;
 }
 
+export type ExpenseCategory = 'Pupuk' | 'Pestisida' | 'Bibit' | 'Alat' | 'Lainnya';
+
 export interface TransactionRequest {
   item_name: string;
   cost: number;
+  category?: ExpenseCategory;
   timestamp?: string;
 }
 

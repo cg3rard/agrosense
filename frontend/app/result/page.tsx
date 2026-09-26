@@ -270,34 +270,6 @@ function ResultInner() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
-
-      {/* ── Navbar ────────────────────────────────────────────────────── */}
-      <nav className="fixed top-0 inset-x-0 z-30 bg-white/75 backdrop-blur-2xl border-b border-[var(--border-subtle)]">
-        <div className="max-w-5xl mx-auto px-6 h-[52px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-[var(--brand)] flex items-center justify-center shadow-sm">
-              <span className="text-white text-xs font-bold select-none">A</span>
-            </div>
-            <span className="text-sm font-semibold text-gray-900 tracking-tight">AgroSense</span>
-          </Link>
-          <div className="hidden sm:flex items-center gap-5 text-sm text-[var(--fg-secondary)]">
-            <Link href="/" className="hover:text-gray-900 transition-colors duration-200">Beranda</Link>
-            <button
-              onClick={() => router.push('/diagnosis')}
-              className="hover:text-gray-900 transition-colors duration-200"
-            >
-              Diagnosis
-            </button>
-          </div>
-          <button
-            onClick={() => router.push('/diagnosis')}
-            className="sm:hidden flex items-center gap-1.5 text-xs text-[var(--fg-tertiary)] hover:text-gray-700 transition-colors"
-          >
-            <IconRefresh /> Diagnosis Baru
-          </button>
-        </div>
-      </nav>
-
       <main className="flex-1 pt-[52px]">
 
         {/* ── Page header ───────────────────────────────────────────────── */}
