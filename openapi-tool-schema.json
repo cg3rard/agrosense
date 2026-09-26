@@ -1,0 +1,189 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AgroSense API",
+    "version": "1.0.0",
+    "description": "AI-powered crop diagnosis and operational expense tracking for AgroSense."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/analyze": {
+      "post": {
+        "operationId": "analyzeCrop",
+        "summary": "Diagnose a crop condition and recommend action",
+        "description": "Accepts an image URL and a text description of symptoms. Returns an AI-generated diagnosis, recommended action, cost estimate in IDR, and ROI status. Call this tool whenever the user asks about plant disease, pests, fertiliser, or any agricultural treatment recommendation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyzeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful diagnosis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error — check request body fields"
+          },
+          "502": {
+            "description": "Upstream Langflow pipeline returned an unexpected response"
+          },
+          "503": {
+            "description": "Langflow pipeline is unreachable"
+          }
+        }
+      }
+    },
+    "/transaction": {
+      "post": {
+        "operationId": "createTransaction",
+        "summary": "Log an operational expense",
+        "description": "Records a purchased item and its cost to the AgroSense operational ledger (Astra DB).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "get": {
+        "operationId": "listTransactions",
+        "summary": "List all logged expenses",
+        "description": "Returns all operational expense records stored in Astra DB.",
+        "responses": {
+          "200": {
+            "description": "Array of transaction records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TransactionResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnalyzeRequest": {
+        "type": "object",
+        "required": ["image_url", "text"],
+        "properties": {
+          "image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Publicly accessible URL of the crop/plant image to analyse."
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Free-text description of symptoms, e.g. 'Daun menguning sejak 3 hari, ada bercak coklat'."
+          }
+        }
+      },
+      "AnalyzeResponse": {
+        "type": "object",
+        "required": ["diagnosis", "recommended_action", "cost_estimate", "roi_status"],
+        "properties": {
+          "diagnosis": {
+            "type": "string",
+            "description": "Name of the identified disease, pest, or condition."
+          },
+          "recommended_action": {
+            "type": "string",
+            "description": "Specific treatment or action the farmer should take."
+          },
+          "cost_estimate": {
+            "type": "number",
+            "description": "Estimated treatment cost in Indonesian Rupiah (IDR)."
+          },
+          "roi_status": {
+            "type": "string",
+            "enum": ["Positive", "Negative", "Neutral"],
+            "description": "Whether the recommended treatment is financially worthwhile."
+          }
+        }
+      },
+      "TransactionRequest": {
+        "type": "object",
+        "required": ["item_name", "cost"],
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name of the purchased item or treatment."
+          },
+          "cost": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Cost of the item in IDR."
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of the purchase. Defaults to now if omitted."
+          }
+        }
+      },
+      "TransactionResponse": {
+        "type": "object",
+        "required": ["id", "item_name", "cost", "timestamp"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "UUID of the transaction record."
+          },
+          "item_name": {
+            "type": "string"
+          },
+          "cost": {
+            "type": "number"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

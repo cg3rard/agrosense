@@ -1,0 +1,22 @@
+# Git
+.git
+.gitignore
+
+# Bob / editor artefacts
+.bob
+
+# Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.env
+backend/.env
+
+# Node
+frontend/node_modules
+frontend/.next
+frontend/.next/cache
+
+# Misc
+**/*.log
+*.md

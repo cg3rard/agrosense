@@ -1,24 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, DragEvent } from 'react';
-
-/* ─────────────────────────────────────────────
-   Types
-───────────────────────────────────────────── */
-interface AIResponse {
-  diagnosis: string;
-  action: string;
-  costEstimate: number;
-  roiStatus: 'Positive' | 'Negative' | 'Neutral';
-  itemName: string;
-}
-
-interface ExpenseLog {
-  id: string;
-  item_name: string;
-  cost: number;
-  timestamp: string;
-}
+import type { AnalyzeResponse, TransactionResponse } from '@/types';
 
 /* ─────────────────────────────────────────────
    Sub-components
@@ -80,10 +63,12 @@ function ResultSkeleton() {
 export default function AgroSenseDashboard() {
   const [textInput, setTextInput]     = useState('');
   const [imageFile, setImageFile]     = useState<File | null>(null);
+  const [imageUrl, setImageUrl]       = useState('');
   const [isDragging, setIsDragging]   = useState(false);
   const [loading, setLoading]         = useState(false);
-  const [aiResult, setAiResult]       = useState<AIResponse | null>(null);
-  const [expenses, setExpenses]       = useState<ExpenseLog[]>([]);
+  const [error, setError]             = useState<string | null>(null);
+  const [aiResult, setAiResult]       = useState<AnalyzeResponse | null>(null);
+  const [expenses, setExpenses]       = useState<TransactionResponse[]>([]);
   const [logLoading, setLogLoading]   = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -97,28 +82,53 @@ export default function AgroSenseDashboard() {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) setImageFile(file);
+    if (file && file.type.startsWith('image/')) {
+      setImageFile(file);
+      setImageUrl('');
+    }
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setImageFile(file);
+    if (file) setImageUrl('');
+  }, []);
+
+  const handleImageUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setImageUrl(e.target.value);
+    if (e.target.value) setImageFile(null);
   }, []);
 
   /* ── analyze ── */
   const handleAnalyze = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    if (!textInput && !imageFile) return;
+    if (!textInput && !imageFile && !imageUrl) return;
+
     setLoading(true);
     setAiResult(null);
+    setError(null);
+
     try {
-      // const res = await fetch('http://localhost:8000/analyze', { method: 'POST', body: formData });
-      // const data = await res.json();
-      await new Promise(r => setTimeout(r, 1800));
-      setAiResult({
-        diagnosis: 'Bercak Daun Cerkospora (Cercospora capsici)',
-        action: 'Semprotkan fungisida berbahan aktif Mankozeb atau Difenokonazol.',
-        costEstimate: 150000,
-        roiStatus: 'Positive',
-        itemName: 'Fungisida Mankozeb 1L',
+      // image_url is optional — only include it when the user provided a real public URL.
+      // Local file drag-drop is for preview only; upload-to-CDN can be added later.
+      const payload: Record<string, unknown> = { text: textInput };
+      if (imageUrl) payload.image_url = imageUrl;
+
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(detail?.detail ?? `Server error ${res.status}`);
+      }
+
+      const data: AnalyzeResponse = await res.json();
+      setAiResult(data);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan.');
     } finally {
       setLoading(false);
     }
@@ -128,30 +138,41 @@ export default function AgroSenseDashboard() {
   const handleLogExpense = async () => {
     if (!aiResult) return;
     setLogLoading(true);
+    setError(null);
+
     try {
       const payload = {
-        item_name: aiResult.itemName,
-        cost: aiResult.costEstimate,
+        item_name: aiResult.recommended_action.slice(0, 80),
+        cost: aiResult.cost_estimate,
         timestamp: new Date().toISOString(),
       };
-      // await fetch('http://localhost:8000/transaction', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload),
-      // });
-      await new Promise(r => setTimeout(r, 600));
-      setExpenses(prev => [{ id: crypto.randomUUID(), ...payload }, ...prev]);
+
+      const res = await fetch('/api/transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const detail = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(detail?.detail ?? `Server error ${res.status}`);
+      }
+
+      const saved: TransactionResponse = await res.json();
+      setExpenses(prev => [saved, ...prev]);
       setAiResult(null);
       setTextInput('');
       setImageFile(null);
+      setImageUrl('');
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Gagal mencatat pengeluaran.');
     } finally {
       setLogLoading(false);
     }
   };
 
   const totalExpenses = expenses.reduce((acc, e) => acc + e.cost, 0);
+  const canSubmit     = !loading && (!!textInput || !!imageFile || !!imageUrl);
 
   /* ── upload zone classes ── */
   const dropZoneBase =
@@ -198,6 +219,13 @@ export default function AgroSenseDashboard() {
           <p className="mt-1 text-sm text-gray-500">Diagnose crop conditions and track operational expenses.</p>
         </div>
 
+        {/* Error banner */}
+        {error && (
+          <div className="mb-6 rounded-2xl bg-red-50 border border-red-200 px-5 py-3 text-sm text-red-700 [animation:fade-in_0.3s_ease-out_forwards]">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
 
           {/* ══ Diagnosis card ══════════════════════════════════════════ */}
@@ -239,7 +267,7 @@ export default function AgroSenseDashboard() {
                   {imageFile ? (
                     <div className="text-center [animation:fade-in_0.3s_ease-out_forwards]">
                       <p className="text-sm font-medium text-gray-800">{imageFile.name}</p>
-                      <p className="text-xs text-emerald-600 mt-0.5">✓ Ready to analyse</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">✓ Siap dianalisis</p>
                     </div>
                   ) : isDragging ? (
                     <p className="text-sm font-medium text-emerald-600">Drop to upload</p>
@@ -250,7 +278,18 @@ export default function AgroSenseDashboard() {
                     </div>
                   )}
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                    onChange={handleFileChange} />
+                </div>
+
+                {/* Image URL input (alternative to file upload) */}
+                <div className="mt-2">
+                  <input
+                    type="url"
+                    value={imageUrl}
+                    onChange={handleImageUrlChange}
+                    placeholder="…atau tempel URL gambar publik"
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50/60 px-3 py-2 text-xs text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 transition-all duration-200"
+                  />
                 </div>
               </div>
 
@@ -271,7 +310,7 @@ export default function AgroSenseDashboard() {
               {/* Analyse CTA */}
               <button
                 type="submit"
-                disabled={loading || (!textInput && !imageFile)}
+                disabled={!canSubmit}
                 className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-in-out hover:bg-emerald-500 hover:-translate-y-0.5 hover:shadow-md active:scale-95 active:bg-emerald-700 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
               >
                 {loading ? <><Spinner size={4} /> Menganalisis…</> : 'Analisis dengan AI'}
@@ -293,26 +332,26 @@ export default function AgroSenseDashboard() {
 
                   <div>
                     <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Rekomendasi</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{aiResult.action}</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{aiResult.recommended_action}</p>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t border-gray-200/80">
                     <div>
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Estimasi Biaya</p>
                       <p className="text-base font-bold text-gray-900 tabular-nums">
-                        Rp {aiResult.costEstimate.toLocaleString('id-ID')}
+                        Rp {aiResult.cost_estimate.toLocaleString('id-ID')}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">ROI Status</p>
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors duration-200 ${
-                        aiResult.roiStatus === 'Positive'
+                        aiResult.roi_status === 'Positive'
                           ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                          : aiResult.roiStatus === 'Negative'
+                          : aiResult.roi_status === 'Negative'
                           ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
                           : 'bg-gray-100 text-gray-500 ring-1 ring-gray-200'
                       }`}>
-                        {aiResult.roiStatus}
+                        {aiResult.roi_status}
                       </span>
                     </div>
                   </div>

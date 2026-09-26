@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 class AnalyzeRequest(BaseModel):
-    image_url: HttpUrl
+    image_url: Optional[HttpUrl] = None
     text: str = Field(..., min_length=1)
 
 
