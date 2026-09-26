@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     astra_db_api_endpoint: str
     astra_db_keyspace: str = "agrosense"
     astra_db_collection: str = "transactions"
+    astra_db_finance_collection: str = "finance_entries"
     langflow_api_url: str
     langflow_api_key: str = ""
 

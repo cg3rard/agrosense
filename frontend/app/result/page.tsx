@@ -1,19 +1,8 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
-
-/* Returns true only on the client after hydration — avoids setState-in-effect */
-function useIsHydrated() {
-  return useSyncExternalStore(
-    (cb) => { window.addEventListener('agrosense:noop', cb); return () => window.removeEventListener('agrosense:noop', cb); },
-    () => true,   // client snapshot  → true
-    () => false,  // server snapshot  → false
-  );
-}
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAgroSense } from '../context/agrosense';
-import type { TransactionResponse } from '@/types';
 
 /* ── Icons ────────────────────────────────────────────────────────────────── */
 function IconHome() {
@@ -29,13 +18,6 @@ function IconRefresh() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
       <path strokeLinecap="round" strokeLinejoin="round"
         d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-    </svg>
-  );
-}
-function IconCheck() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
-      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
     </svg>
   );
 }
@@ -55,43 +37,70 @@ function IconLeaf() {
     </svg>
   );
 }
-function IconTrend({ up }: { up: boolean }) {
-  return up ? (
+function IconTrendUp() {
+  return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
     </svg>
-  ) : (
+  );
+}
+function IconTrendDown() {
+  return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181" />
     </svg>
   );
 }
-function Spinner() {
+function IconMinus() {
   return (
-    <svg className="animate-spin w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
     </svg>
   );
 }
 
+/* ── ROI status normalisation ────────────────────────────────────────────── */
+type RoiKind = 'Positive' | 'Negative' | 'Neutral';
+
+/** Backend/LLM may return varying casings or synonyms — normalise to a known kind. */
+function normalizeRoiStatus(raw: string): RoiKind {
+  const v = raw.trim().toLowerCase();
+  if (v.includes('positive') || v.includes('untung') || v.includes('baik')) return 'Positive';
+  if (v.includes('negative') || v.includes('rugi') || v.includes('buruk')) return 'Negative';
+  return 'Neutral';
+}
+
+const ROI_META: Record<RoiKind, {
+  bg: string; text: string; ring: string; label: string; icon: React.ReactNode; desc: string;
+}> = {
+  Positive: {
+    bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-1 ring-emerald-200',
+    label: 'Menguntungkan', icon: <IconTrendUp />,
+    desc: 'Tindakan ini diperkirakan menghasilkan keuntungan finansial melebihi biaya yang dikeluarkan.',
+  },
+  Negative: {
+    bg: 'bg-red-50', text: 'text-red-600', ring: 'ring-1 ring-red-200',
+    label: 'Tidak Menguntungkan', icon: <IconTrendDown />,
+    desc: 'Biaya tindakan kemungkinan melebihi manfaat panen yang diharapkan. Pertimbangkan alternatif yang lebih hemat.',
+  },
+  Neutral: {
+    bg: 'bg-gray-100', text: 'text-gray-500', ring: 'ring-1 ring-gray-200',
+    label: 'Netral', icon: <IconMinus />,
+    desc: 'Dampak finansial dari tindakan ini bersifat seimbang antara biaya dan manfaat.',
+  },
+};
+
 /* ── ROI Badge ────────────────────────────────────────────────────────────── */
 function RoiBadge({ status, large }: { status: string; large?: boolean }) {
-  const map: Record<string, { bg: string; text: string; ring: string; label: string }> = {
-    Positive: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-1 ring-emerald-200', label: 'Menguntungkan' },
-    Negative: { bg: 'bg-red-50',     text: 'text-red-600',     ring: 'ring-1 ring-red-200',     label: 'Tidak Menguntungkan' },
-    Neutral:  { bg: 'bg-gray-100',   text: 'text-gray-500',    ring: 'ring-1 ring-gray-200',    label: 'Netral' },
-  };
-  const s = map[status] ?? map.Neutral;
-  const up = status === 'Positive';
-  const neutral = status === 'Neutral';
+  const kind = normalizeRoiStatus(status);
+  const m = ROI_META[kind];
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full font-semibold
       ${large ? 'px-4 py-2 text-sm' : 'px-2.5 py-1 text-xs'}
-      ${s.bg} ${s.text} ${s.ring}`}
+      ${m.bg} ${m.text} ${m.ring}`}
     >
-      {!neutral && <span className="shrink-0"><IconTrend up={up} /></span>}
-      {neutral ? '— ' : ''}{large ? s.label : status}
+      <span className="shrink-0">{m.icon}</span>
+      {m.label}
     </span>
   );
 }
@@ -110,15 +119,14 @@ function ActionStep({ n, text }: { n: number; text: string }) {
 
 /* ── Metric Block ─────────────────────────────────────────────────────────── */
 function MetricBlock({
-  label, icon, children, accent,
+  label, icon, children,
 }: {
   label: string;
   icon: React.ReactNode;
   children: React.ReactNode;
-  accent?: string;
 }) {
   return (
-    <div className={`rounded-2xl border px-6 py-5 flex items-start gap-4 ${accent ?? 'bg-white border-gray-100'}`}>
+    <div className="rounded-2xl border px-6 py-5 flex items-start gap-4 bg-white border-gray-100">
       <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center shrink-0">
         {icon}
       </div>
@@ -130,102 +138,13 @@ function MetricBlock({
   );
 }
 
-/* ── Expense Table ────────────────────────────────────────────────────────── */
-function ExpenseTable({ expenses }: { expenses: TransactionResponse[] }) {
-  const total = expenses.reduce((s, e) => s + e.cost, 0);
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-gray-100">
-            {(['Tanggal', 'Item / Tindakan', 'Nominal'] as const).map(h => (
-              <th key={h}
-                className={`pb-3 text-[10px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-widest
-                  ${h === 'Nominal' ? 'text-right' : 'pr-4'}`}
-              >{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-50">
-          {expenses.map(e => (
-            <tr key={e.id} className="hover:bg-gray-50/60 transition-colors duration-150">
-              <td className="py-3 pr-4 text-xs text-[var(--fg-tertiary)] whitespace-nowrap">
-                {new Date(e.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-              </td>
-              <td className="py-3 pr-4 font-medium text-gray-900 max-w-[180px] truncate">{e.item_name}</td>
-              <td className="py-3 text-right font-semibold text-gray-800 tabular-nums">
-                Rp {e.cost.toLocaleString('id-ID')}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {/* total bar */}
-      <div className="mt-4 rounded-2xl bg-gray-900 px-5 py-4 flex items-center justify-between">
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-widest">Total Pengeluaran</p>
-        <p className="text-base font-bold text-white tabular-nums">Rp {total.toLocaleString('id-ID')}</p>
-      </div>
-    </div>
-  );
-}
-
 /* ── Page inner ───────────────────────────────────────────────────────────── */
 function ResultInner() {
   const router = useRouter();
-  const { latestResult } = useAgroSense();
+  const { latestResult, resultHydrated } = useAgroSense();
 
-  const [expenses, setExpenses]     = useState<TransactionResponse[]>([]);
-  const [loadingExp, setLoadingExp] = useState(true);
-  const [logLoading, setLogLoading] = useState(false);
-  const [logged, setLogged]         = useState(false);
-  const [error, setError]           = useState<string | null>(null);
-  // true only after client hydration — sessionStorage lazy init has already run
-  const hydrated = useIsHydrated();
-
-  /* redirect only after hydration confirms there is genuinely no result */
-  useEffect(() => {
-    if (hydrated && !latestResult) router.replace('/diagnosis');
-  }, [hydrated, latestResult, router]);
-
-  /* load transaction history */
-  useEffect(() => {
-    fetch('/api/transaction')
-      .then(r => r.json())
-      .then((d: TransactionResponse[]) => setExpenses(Array.isArray(d) ? d : []))
-      .catch(() => setExpenses([]))
-      .finally(() => setLoadingExp(false));
-  }, []);
-
-  /* log expense to DB */
-  const handleLog = async () => {
-    if (!latestResult || logged) return;
-    setLogLoading(true); setError(null);
-    try {
-      const res = await fetch('/api/transaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item_name: latestResult.recommended_action.slice(0, 80),
-          cost: latestResult.cost_estimate,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(d?.detail ?? `Error ${res.status}`);
-      }
-      const saved: TransactionResponse = await res.json();
-      setExpenses(p => [saved, ...p]);
-      setLogged(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal mencatat pengeluaran.');
-    } finally {
-      setLogLoading(false);
-    }
-  };
-
-  /* Show a loading pulse while waiting for sessionStorage hydration */
-  if (!hydrated || !latestResult) {
+  /* Show a loading pulse while the context re-syncs with sessionStorage on mount */
+  if (!resultHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
         <div className="flex flex-col items-center gap-4">
@@ -240,27 +159,48 @@ function ResultInner() {
     );
   }
 
+  /* No result stored for this session — show an empty state instead of redirecting */
+  if (!latestResult) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
+        <main className="flex-1 pt-[52px] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4 text-center px-6 py-16">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center">
+              <IconLeaf />
+            </div>
+            <div>
+              <p className="text-lg font-semibold text-gray-900">Belum ada hasil</p>
+              <p className="text-sm text-[var(--fg-tertiary)] mt-1 max-w-sm leading-relaxed">
+                Anda belum melakukan diagnosis tanaman pada sesi ini. Mulai diagnosis untuk melihat rekomendasi AI di sini.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/diagnosis')}
+              className="mt-2 inline-flex items-center gap-2 bg-[var(--brand)] hover:bg-[var(--brand-mid)] text-white font-semibold rounded-2xl px-6 py-3 text-sm shadow-sm hover:-translate-y-0.5 hover:shadow-md active:scale-95 transition-all duration-200"
+            >
+              Mulai Diagnosis
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   /* ── derived visual tokens from ROI ── */
-  const isPositive = latestResult.roi_status === 'Positive';
-  const isNegative = latestResult.roi_status === 'Negative';
+  const roiKind = normalizeRoiStatus(latestResult.roi_status);
+  const roiMeta = ROI_META[roiKind];
 
-  const roiAccent = isPositive
-    ? 'bg-emerald-50 border-emerald-100'
-    : isNegative
-    ? 'bg-red-50 border-red-100'
-    : 'bg-gray-50 border-gray-100';
-
-  const headerAccent = isPositive
+  const headerAccent = roiKind === 'Positive'
     ? 'from-emerald-50/70 via-white to-white'
-    : isNegative
+    : roiKind === 'Negative'
     ? 'from-red-50/60 via-white to-white'
     : 'from-gray-50/60 via-white to-white';
 
-  const roiDesc = isPositive
-    ? 'Tindakan ini diperkirakan menghasilkan keuntungan finansial melebihi biaya yang dikeluarkan.'
-    : isNegative
-    ? 'Biaya tindakan kemungkinan melebihi manfaat panen yang diharapkan. Pertimbangkan alternatif yang lebih hemat.'
-    : 'Dampak finansial dari tindakan ini bersifat seimbang antara biaya dan manfaat.';
+  const roiAccent = roiKind === 'Positive'
+    ? 'bg-emerald-50 border-emerald-100'
+    : roiKind === 'Negative'
+    ? 'bg-red-50 border-red-100'
+    : 'bg-gray-50 border-gray-100';
 
   /* split recommended_action into numbered steps for better readability */
   const actionSteps = latestResult.recommended_action
@@ -276,7 +216,7 @@ function ResultInner() {
         <div className="bg-white border-b border-gray-100/80">
           <div className="max-w-5xl mx-auto px-6 py-10">
             <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-2 animate-fade-in">
-              Module 01 &amp; 02 — Hasil Lengkap
+              Hasil Diagnosis AI
             </p>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 mb-3 animate-fade-up">
               Hasil Analisis &amp; Rekomendasi
@@ -289,16 +229,6 @@ function ResultInner() {
         </div>
 
         <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
-
-          {/* error banner */}
-          {error && (
-            <div className="rounded-2xl bg-red-50 border border-red-100 px-5 py-4 text-sm text-red-700 flex items-start gap-3 animate-fade-in">
-              <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-              </svg>
-              <span>{error}</span>
-            </div>
-          )}
 
           {/* ══ RESULT CARD ══════════════════════════════════════════════ */}
           <div
@@ -389,83 +319,27 @@ function ResultInner() {
 
                   {/* ROI Status */}
                   <div className={`rounded-2xl border px-6 py-5 flex items-start gap-4 ${roiAccent}`}>
-                    <div className="w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center shrink-0">
-                      <RoiBadge status={latestResult.roi_status} />
+                    <div className={`w-10 h-10 rounded-xl bg-white/80 flex items-center justify-center shrink-0 ${roiMeta.text}`}>
+                      {roiMeta.icon}
                     </div>
                     <div className="min-w-0">
                       <p className="text-[11px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-widest mb-1.5">
                         Status ROI
                       </p>
                       <RoiBadge status={latestResult.roi_status} large />
-                      <p className="text-xs text-[var(--fg-secondary)] mt-2 leading-relaxed">{roiDesc}</p>
+                      <p className="text-xs text-[var(--fg-secondary)] mt-2 leading-relaxed">{roiMeta.desc}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* ── Log expense button ── */}
-              <div className="pt-1">
-                <button
-                  onClick={handleLog}
-                  disabled={logLoading || logged}
-                  className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold rounded-2xl py-3.5 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
-                >
-                  {logLoading
-                    ? <><Spinner /> Mencatat pengeluaran…</>
-                    : logged
-                    ? <><IconCheck /> Pengeluaran Tercatat di Buku Kas</>
-                    : '💳  Beli & Catat Pengeluaran'}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* ══ FINANCIAL LEDGER ════════════════════════════════════════ */}
-          <div
-            className="bg-white border border-gray-100 rounded-3xl shadow-[var(--shadow-card)] overflow-hidden animate-fade-up"
-            style={{ animationDelay: '120ms' }}
-          >
-            <div className="px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center shrink-0">
-                <IconWallet />
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-[var(--brand)] uppercase tracking-widest">Module 02</p>
-                <h2 className="text-sm font-semibold text-gray-900 tracking-tight">Buku Kas Operasional</h2>
-              </div>
-            </div>
-
-            <div className="px-8 py-6">
-              {loadingExp ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => (
-                    <div key={i} className="h-11 rounded-xl bg-gray-100 animate-skeleton" />
-                  ))}
-                </div>
-              ) : expenses.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-3-3v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Belum ada transaksi</p>
-                    <p className="text-xs text-[var(--fg-tertiary)] mt-1 max-w-xs leading-relaxed">
-                      Catat pengeluaran dari hasil diagnosis di atas untuk mulai melacak keuangan kebun Anda.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <ExpenseTable expenses={expenses} />
-              )}
             </div>
           </div>
 
           {/* ══ BOTTOM NAVIGATION ═══════════════════════════════════════ */}
           <div
             className="grid sm:grid-cols-2 gap-3 animate-fade-up"
-            style={{ animationDelay: '180ms' }}
+            style={{ animationDelay: '120ms' }}
           >
             <button
               onClick={() => router.push('/diagnosis')}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl, Field
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime
 
 
@@ -15,14 +15,21 @@ class AnalyzeResponse(BaseModel):
     roi_status: str
 
 
-class TransactionRequest(BaseModel):
-    item_name: str = Field(..., min_length=1)
-    cost: float = Field(..., gt=0)
+FinanceEntryType = Literal["expense", "income"]
+
+
+class FinanceEntryRequest(BaseModel):
+    type: FinanceEntryType
+    item_name: str = Field(..., min_length=1, max_length=200)
+    amount: float = Field(..., gt=0)
+    note: Optional[str] = Field(default=None, max_length=500)
     timestamp: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
 
-class TransactionResponse(BaseModel):
+class FinanceEntryResponse(BaseModel):
     id: str
+    type: FinanceEntryType
     item_name: str
-    cost: float
+    amount: float
+    note: Optional[str] = None
     timestamp: datetime

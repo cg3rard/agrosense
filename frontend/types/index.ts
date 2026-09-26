@@ -5,26 +5,29 @@ export interface AnalyzeResponse {
   roi_status: string;
 }
 
-export type ExpenseCategory = 'Pupuk' | 'Pestisida' | 'Bibit' | 'Alat' | 'Lainnya';
-
-export interface TransactionRequest {
-  item_name: string;
-  cost: number;
-  category?: ExpenseCategory;
-  timestamp?: string;
-}
-
-export interface TransactionResponse {
-  id: string;
-  item_name: string;
-  cost: number;
-  timestamp: string;
-}
-
 export interface DiagnosisHistory {
   id: string;
   timestamp: string;
   symptomText: string;
   imageName?: string;
   result: AnalyzeResponse;
+}
+
+export type FinanceEntryType = 'expense' | 'income';
+
+export interface FinanceEntryRequest {
+  type: FinanceEntryType;
+  item_name: string;
+  amount: number;
+  note?: string;
+  timestamp?: string;
+}
+
+export interface FinanceEntryResponse {
+  id: string;
+  type: FinanceEntryType;
+  item_name: string;
+  amount: number;
+  note?: string | null;
+  timestamp: string;
 }

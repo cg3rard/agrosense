@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   useCallback,
   ReactNode,
 } from 'react';
@@ -28,15 +29,30 @@ interface AgroSenseState {
   history: DiagnosisHistory[];
   addHistory: (entry: DiagnosisHistory) => void;
   clearHistory: () => void;
+  /** true once the initial client-side sessionStorage read has completed */
+  resultHydrated: boolean;
 }
 
 const AgroSenseContext = createContext<AgroSenseState | null>(null);
 
 export function AgroSenseProvider({ children }: { children: ReactNode }) {
-  // Initialise from sessionStorage so state survives Next.js client-side navigation
+  // Initialise from sessionStorage so state survives Next.js client-side navigation.
+  // On the very first render (server / pre-hydration) this is always null because
+  // `window` is unavailable — we re-sync it for real in the effect below.
   const [latestResult, _setLatestResult] = useState<AnalyzeResponse | null>(
     () => readSession<AnalyzeResponse>(RESULT_KEY),
   );
+  const [resultHydrated, setResultHydrated] = useState(false);
+
+  // Re-read sessionStorage once the component has mounted on the client.
+  // This closes the race where the lazy useState initializer ran during SSR
+  // (window undefined → null) and never got a chance to re-read afterwards,
+  // which could make pages think "no result exists" right after navigation.
+  useEffect(() => {
+    const stored = readSession<AnalyzeResponse>(RESULT_KEY);
+    if (stored) _setLatestResult(stored);
+    setResultHydrated(true);
+  }, []);
 
   const setLatestResult = useCallback((r: AnalyzeResponse | null) => {
     _setLatestResult(r);
@@ -70,7 +86,7 @@ export function AgroSenseProvider({ children }: { children: ReactNode }) {
 
   return (
     <AgroSenseContext.Provider
-      value={{ latestResult, setLatestResult, history, addHistory, clearHistory }}
+      value={{ latestResult, setLatestResult, history, addHistory, clearHistory, resultHydrated }}
     >
       {children}
     </AgroSenseContext.Provider>

@@ -144,7 +144,6 @@ function DiagnosisInner() {
   const [isDragging, setIsDragging]       = useState(false);
   const [loading, setLoading]             = useState(false);
   const [error, setError]                 = useState<string | null>(null);
-  const [logLoading, setLogLoading]       = useState(false);
   const [pendingResult, setPendingResult] = useState<AnalyzeResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraRef    = useRef<HTMLInputElement>(null);
@@ -209,27 +208,6 @@ function DiagnosisInner() {
     } finally {
       setLoading(false);
     }
-  };
-
-  /* log & navigate to result */
-  const handleLogAndNavigate = async () => {
-    if (!pendingResult) return;
-    setLogLoading(true); setError(null);
-    try {
-      const res = await fetch('/api/transaction', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          item_name: pendingResult.recommended_action.slice(0, 80),
-          cost: pendingResult.cost_estimate,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-      if (!res.ok) { const d = await res.json().catch(() => ({ detail: res.statusText })); throw new Error(d?.detail); }
-      router.push('/result');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal mencatat pengeluaran.');
-    } finally { setLogLoading(false); }
   };
 
   const canSubmit = !loading && (!!textInput.trim() || !!imageFile || !!imageUrl);
@@ -370,20 +348,6 @@ function DiagnosisInner() {
                   )}
                 </div>
                 <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={pickFile} />
-
-                {/* URL fallback */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-gray-100" />
-                  <span className="text-[11px] text-[var(--fg-tertiary)] font-medium">atau gunakan URL</span>
-                  <div className="flex-1 h-px bg-gray-100" />
-                </div>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={e => { setImageUrl(e.target.value); if (e.target.value) clearImage(); }}
-                  placeholder="https://contoh.com/foto-tanaman.jpg"
-                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/60 px-4 py-3 text-sm text-gray-800 placeholder-[var(--fg-tertiary)] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
-                />
               </div>
 
               {/* ── Gejala textarea ── */}
@@ -471,19 +435,12 @@ function DiagnosisInner() {
                     </div>
                   </div>
 
-                  <div className="px-5 pb-5 grid grid-cols-2 gap-2.5">
+                  <div className="px-5 pb-5">
                     <button
                       onClick={() => router.push('/result')}
-                      className="rounded-2xl border border-gray-200 bg-white text-gray-700 py-3 text-sm font-medium hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 active:scale-95"
+                      className="w-full rounded-2xl bg-gray-900 text-white py-3 text-sm font-semibold hover:bg-gray-700 hover:-translate-y-0.5 hover:shadow-md active:scale-95 transition-all duration-200"
                     >
                       Lihat Detail Lengkap
-                    </button>
-                    <button
-                      onClick={handleLogAndNavigate}
-                      disabled={logLoading}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gray-900 text-white py-3 text-sm font-semibold hover:bg-gray-700 hover:-translate-y-0.5 hover:shadow-md active:scale-95 disabled:opacity-40 transition-all duration-200"
-                    >
-                      {logLoading ? <><Spinner /> Mencatat…</> : 'Beli & Catat'}
                     </button>
                   </div>
                 </div>

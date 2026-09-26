@@ -7,7 +7,7 @@ const NAV_LINKS = [
   { href: '/',          label: 'Home' },
   { href: '/diagnosis', label: 'Analisis Tanaman' },
   { href: '/result',    label: 'Rangkuman Hasil' },
-  { href: '/expenses',  label: 'Pencatatan Keuangan' },
+  { href: '/keuangan',  label: 'Catatan Keuangan' },
 ] as const;
 
 function IconArrow() {

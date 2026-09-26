@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routes.analyze import router as analyze_router
-from routes.transaction import router as transaction_router
+from routes.finance import router as finance_router
 
 # ---------------------------------------------------------------------------
 # App
@@ -11,7 +11,7 @@ from routes.transaction import router as transaction_router
 app = FastAPI(
     title="AgroSense API",
     version="1.0.0",
-    description="AI-powered crop diagnosis and operational expense tracking.",
+    description="AI-powered crop diagnosis and financial record keeping.",
 )
 
 app.add_middleware(
@@ -27,4 +27,4 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 app.include_router(analyze_router)
-app.include_router(transaction_router)
+app.include_router(finance_router)

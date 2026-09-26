@@ -57,71 +57,81 @@ export default function LandingPage() {
       <div className="min-h-screen flex flex-col">
         <main className="flex-1">
 
-          {/* ══ HERO ════════════════════════════════════════════════════ */}
-          <section className="relative overflow-hidden bg-white pt-[52px]">
-            {/* ambient radial glow */}
+          {/* ══ HERO — full-bleed photo banner with glass overlay ══════════ */}
+          <section className="relative overflow-hidden pt-[52px]">
+            {/* background photo — farmers working in the field */}
+            <div
+              aria-hidden
+              className="absolute inset-0 bg-cover bg-center scale-105 animate-[heroZoom_20s_ease-in-out_infinite_alternate]"
+              style={{
+                backgroundImage:
+                  "url('https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2069&auto=format&fit=crop')",
+              }}
+            />
+            {/* dark gradient wash for legibility */}
+            <div
+              aria-hidden
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(180deg, rgba(10,20,15,0.55) 0%, rgba(10,20,15,0.35) 45%, rgba(10,20,15,0.75) 100%)',
+              }}
+            />
+            {/* ambient brand-tinted glow */}
             <div aria-hidden className="pointer-events-none absolute inset-0"
-              style={{ background: 'radial-gradient(ellipse 100% 60% at 50% 0%, rgba(45,106,79,0.07) 0%, transparent 65%)' }} />
-            {/* faint grid pattern */}
-            <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.025]"
-              style={{ backgroundImage: 'linear-gradient(var(--fg-primary) 1px,transparent 1px),linear-gradient(90deg,var(--fg-primary) 1px,transparent 1px)', backgroundSize: '60px 60px' }} />
+              style={{ background: 'radial-gradient(ellipse 90% 55% at 50% 0%, rgba(82,183,136,0.25) 0%, transparent 65%)' }} />
 
-            <div className="relative max-w-4xl mx-auto px-6 pt-24 pb-32 text-center">
-              {/* badge */}
-              <div className="inline-flex items-center gap-2 bg-[var(--brand-light)] text-[var(--brand)] text-xs font-semibold rounded-full px-4 py-1.5 mb-10 tracking-wide animate-fade-in">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse" />
-                Powered by AI &amp; Astra DB RAG
-              </div>
+            <div className="relative min-h-[640px] sm:min-h-[720px] flex items-center justify-center">
+              <div className="max-w-4xl mx-auto px-6 py-20 text-center">
 
-              {/* heading */}
-              <h1
-                className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 leading-[1.06] mb-7 animate-fade-up"
-                style={{ animationDelay: '60ms' }}
-              >
-                Masa Depan Pertanian Cerdas
-                <br className="hidden sm:block" />
-                <span className="text-[var(--brand)]"> Berbasis AI</span> &amp;{' '}
-                <span className="text-[var(--brand)]">Financial Advisor</span>
-              </h1>
-
-              {/* subtitle */}
-              <p
-                className="text-lg sm:text-xl text-[var(--fg-secondary)] max-w-2xl mx-auto leading-relaxed mb-12 animate-fade-up"
-                style={{ animationDelay: '120ms' }}
-              >
-                Diagnosa penyakit &amp; hama tanaman secara instan menggunakan foto,
-                dapatkan rekomendasi tindakan berbasis AI, dan kelola pengeluaran
-                operasional kebun Anda lengkap dengan analisis ROI—semuanya dalam
-                satu platform.
-              </p>
-
-              {/* CTAs — primary rounded-full, secondary pill outline */}
-              <div
-                className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-up"
-                style={{ animationDelay: '180ms' }}
-              >
-                <Link
-                  href="/diagnosis"
-                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full px-8 py-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95"
+                {/* heading + subtitle wrapped in a large glass panel */}
+                <div
+                  className="glass-panel-dark rounded-[2.5rem] px-6 sm:px-14 py-12 sm:py-16 animate-fade-up"
+                  style={{ animationDelay: '60ms' }}
                 >
-                  Mulai Diagnosis Sekarang <IconArrow />
-                </Link>
-                <a
-                  href="#fitur"
-                  className="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-semibold rounded-full px-7 py-4 shadow-sm transition-all duration-200 hover:border-gray-300 hover:-translate-y-0.5 hover:shadow-md active:scale-95"
-                >
-                  Pelajari Fitur
-                </a>
-              </div>
+                  <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white leading-[1.06] mb-7">
+                    Masa Depan Pertanian Cerdas
+                    <br className="hidden sm:block" />
+                    <span className="text-emerald-300"> Berbasis AI</span> &amp;{' '}
+                    <span className="text-emerald-300">Financial Advisor</span>
+                  </h1>
 
-              {/* social proof pills */}
-              <div
-                className="mt-14 flex flex-wrap items-center justify-center gap-2.5 text-xs text-[var(--fg-tertiary)] animate-fade-up"
-                style={{ animationDelay: '240ms' }}
-              >
-                {['🌾 Padi & Palawija', '🌶 Sayuran & Cabai', '🌿 Perkebunan', '📊 ROI Estimator'].map(t => (
-                  <span key={t} className="bg-gray-50 border border-gray-100 rounded-full px-3.5 py-1">{t}</span>
-                ))}
+                  <p className="text-lg sm:text-xl text-white/85 max-w-2xl mx-auto leading-relaxed">
+                    Diagnosa penyakit &amp; hama tanaman secara instan menggunakan foto,
+                    dapatkan rekomendasi tindakan berbasis AI, dan kelola pengeluaran
+                    operasional kebun Anda lengkap dengan analisis ROI—semuanya dalam
+                    satu platform.
+                  </p>
+
+                  {/* CTAs */}
+                  <div
+                    className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-up"
+                    style={{ animationDelay: '120ms' }}
+                  >
+                    <Link
+                      href="/diagnosis"
+                      className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-full px-8 py-4 shadow-lg shadow-emerald-900/30 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+                    >
+                      Mulai Diagnosis Sekarang <IconArrow />
+                    </Link>
+                    <a
+                      href="#fitur"
+                      className="glass-pill-dark inline-flex items-center gap-2 text-white font-semibold rounded-full px-7 py-4 transition-all duration-200 hover:bg-white/20 hover:-translate-y-0.5 active:scale-95"
+                    >
+                      Pelajari Fitur
+                    </a>
+                  </div>
+                </div>
+
+                {/* social proof pills */}
+                <div
+                  className="mt-10 flex flex-wrap items-center justify-center gap-2.5 text-xs text-white/90 animate-fade-up"
+                  style={{ animationDelay: '180ms' }}
+                >
+                  {['🌾 Padi & Palawija', '🌶 Sayuran & Cabai', '🌿 Perkebunan', '📊 ROI Estimator'].map(t => (
+                    <span key={t} className="glass-pill-dark rounded-full px-3.5 py-1">{t}</span>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
