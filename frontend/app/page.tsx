@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, DragEvent } from 'react';
 
+/* ─────────────────────────────────────────────
+   Types
+───────────────────────────────────────────── */
 interface AIResponse {
   diagnosis: string;
   action: string;
@@ -17,45 +20,111 @@ interface ExpenseLog {
   timestamp: string;
 }
 
-export default function AgroSenseDashboard() {
-  const [textInput, setTextInput] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [aiResult, setAiResult] = useState<AIResponse | null>(null);
-  const [expenses, setExpenses] = useState<ExpenseLog[]>([]);
-  const [logLoading, setLogLoading] = useState(false);
+/* ─────────────────────────────────────────────
+   Sub-components
+───────────────────────────────────────────── */
+function Spinner({ size = 4 }: { size?: number }) {
+  return (
+    <svg
+      style={{ width: `${size * 4}px`, height: `${size * 4}px` }}
+      className="animate-spin text-current shrink-0"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+    </svg>
+  );
+}
 
-  const handleAnalyze = async (e: React.FormEvent) => {
+function SkeletonBlock({ className = '' }: { className?: string }) {
+  return (
+    <div
+      className={`rounded-lg bg-gray-200/70 [animation:skeleton_1.4s_ease-in-out_infinite] ${className}`}
+    />
+  );
+}
+
+function ResultSkeleton() {
+  return (
+    <div className="mx-7 mb-7 rounded-2xl bg-gray-50/80 border border-gray-100 overflow-hidden [animation:fade-in_0.3s_ease-out_forwards]">
+      <div className="px-5 py-4 space-y-5">
+        <div className="space-y-1.5">
+          <SkeletonBlock className="h-2.5 w-16" />
+          <SkeletonBlock className="h-4 w-3/4" />
+        </div>
+        <div className="space-y-1.5">
+          <SkeletonBlock className="h-2.5 w-20" />
+          <SkeletonBlock className="h-4 w-full" />
+          <SkeletonBlock className="h-4 w-5/6" />
+        </div>
+        <div className="flex items-center justify-between pt-3 border-t border-gray-200/80">
+          <div className="space-y-1.5">
+            <SkeletonBlock className="h-2.5 w-20" />
+            <SkeletonBlock className="h-6 w-28" />
+          </div>
+          <SkeletonBlock className="h-7 w-20 rounded-full" />
+        </div>
+      </div>
+      <div className="px-5 pb-5">
+        <SkeletonBlock className="h-10 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Main page
+───────────────────────────────────────────── */
+export default function AgroSenseDashboard() {
+  const [textInput, setTextInput]     = useState('');
+  const [imageFile, setImageFile]     = useState<File | null>(null);
+  const [isDragging, setIsDragging]   = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [aiResult, setAiResult]       = useState<AIResponse | null>(null);
+  const [expenses, setExpenses]       = useState<ExpenseLog[]>([]);
+  const [logLoading, setLogLoading]   = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* ── drag-and-drop handlers ── */
+  const onDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+  const onDragLeave = useCallback(() => setIsDragging(false), []);
+  const onDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) setImageFile(file);
+  }, []);
+
+  /* ── analyze ── */
+  const handleAnalyze = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!textInput && !imageFile) return;
-    
     setLoading(true);
+    setAiResult(null);
     try {
-      const formData = new FormData();
-      if (textInput) formData.append('text', textInput);
-      if (imageFile) formData.append('image', imageFile);
-
-      // Dummy fetch - replace with actual FastAPI endpoint
       // const res = await fetch('http://localhost:8000/analyze', { method: 'POST', body: formData });
       // const data = await res.json();
-      
-      // Mock Data for UI testing
-      setTimeout(() => {
-        setAiResult({
-          diagnosis: 'Bercak Daun Cerkospora (Cercospora capsici)',
-          action: 'Semprotkan fungisida berbahan aktif Mankozeb atau Difenokonazol.',
-          costEstimate: 150000,
-          roiStatus: 'Positive',
-          itemName: 'Fungisida Mankozeb 1L'
-        });
-        setLoading(false);
-      }, 1500);
-    } catch (error) {
-      console.error(error);
+      await new Promise(r => setTimeout(r, 1800));
+      setAiResult({
+        diagnosis: 'Bercak Daun Cerkospora (Cercospora capsici)',
+        action: 'Semprotkan fungisida berbahan aktif Mankozeb atau Difenokonazol.',
+        costEstimate: 150000,
+        roiStatus: 'Positive',
+        itemName: 'Fungisida Mankozeb 1L',
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
       setLoading(false);
     }
   };
 
+  /* ── log expense ── */
   const handleLogExpense = async () => {
     if (!aiResult) return;
     setLogLoading(true);
@@ -63,147 +132,290 @@ export default function AgroSenseDashboard() {
       const payload = {
         item_name: aiResult.itemName,
         cost: aiResult.costEstimate,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
-      // Dummy fetch - replace with actual FastAPI endpoint
       // await fetch('http://localhost:8000/transaction', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload)
+      //   body: JSON.stringify(payload),
       // });
-
-      setExpenses(prev => [...prev, { id: Math.random().toString(), ...payload }]);
+      await new Promise(r => setTimeout(r, 600));
+      setExpenses(prev => [{ id: crypto.randomUUID(), ...payload }, ...prev]);
       setAiResult(null);
       setTextInput('');
       setImageFile(null);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLogLoading(false);
     }
   };
 
+  const totalExpenses = expenses.reduce((acc, e) => acc + e.cost, 0);
+
+  /* ── upload zone classes ── */
+  const dropZoneBase =
+    'relative flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed ' +
+    'cursor-pointer py-8 px-4 transition-all duration-300 ease-in-out select-none';
+  const dropZoneIdle   = 'border-gray-200 bg-gray-50/60 hover:border-emerald-300 hover:bg-emerald-50/40 hover:shadow-sm';
+  const dropZoneActive = 'border-emerald-400 bg-emerald-50/60 scale-[0.99] shadow-inner';
+
   return (
-    <div className="min-h-screen bg-emerald-50 p-6 font-sans text-emerald-950">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-emerald-800">AgroSense Dashboard</h1>
-        <p className="text-emerald-600">AI Chief Agronomist & Financial OS</p>
-      </header>
+    <div className="min-h-screen bg-[#f5f5f7] font-sans antialiased">
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Chat / Analysis Component */}
-        <section className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
-          <h2 className="text-xl font-semibold mb-4 text-emerald-700">Diagnosis Tanaman</h2>
-          
-          <form onSubmit={handleAnalyze} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Upload Foto Fisik Tanaman</label>
-              <input 
-                type="file" 
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="w-full text-sm text-emerald-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200"
-              />
+      {/* ── Navbar ─────────────────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-gray-100/80 transition-shadow duration-300">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shadow-sm transition-transform duration-200 hover:scale-110">
+              <span className="text-white text-xs font-bold select-none">A</span>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Keluhan / Gejala Tambahan</label>
-              <textarea 
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                className="w-full rounded-lg border-emerald-200 focus:ring-emerald-500 focus:border-emerald-500 p-3 bg-emerald-50/50"
-                rows={3}
-                placeholder="Contoh: Daun menguning sejak 3 hari lalu..."
-              />
+            <span className="text-sm font-semibold text-gray-900 tracking-tight">AgroSense</span>
+          </div>
+
+          <span className="hidden sm:block text-xs text-gray-400 tracking-wide">
+            AI Agronomist &amp; Financial OS
+          </span>
+
+          <span
+            className={`text-xs font-medium rounded-full px-3 py-1 border transition-all duration-500 ${
+              expenses.length > 0
+                ? 'opacity-100 bg-emerald-50 text-emerald-700 border-emerald-100'
+                : 'opacity-0 pointer-events-none bg-transparent text-transparent border-transparent'
+            }`}
+          >
+            {expenses.length} {expenses.length === 1 ? 'expense' : 'expenses'} logged
+          </span>
+        </div>
+      </nav>
+
+      {/* ── Main ───────────────────────────────────────────────────────── */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+
+        {/* Heading */}
+        <div className="mb-10 [animation:fade-up_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+          <p className="mt-1 text-sm text-gray-500">Diagnose crop conditions and track operational expenses.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+          {/* ══ Diagnosis card ══════════════════════════════════════════ */}
+          <div className="bg-white/70 backdrop-blur-md border border-gray-100 rounded-3xl shadow-sm shadow-gray-200/60 overflow-hidden transition-shadow duration-300 hover:shadow-md [animation:fade-up_0.45s_0.05s_cubic-bezier(0.16,1,0.3,1)_both]">
+
+            {/* Card header */}
+            <div className="px-7 pt-7 pb-5 border-b border-gray-100/80">
+              <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-0.5">Module 01</p>
+              <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Diagnosis Tanaman</h2>
             </div>
 
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition disabled:opacity-50"
-            >
-              {loading ? 'Menganalisis...' : 'Analisis dengan AI'}
-            </button>
-          </form>
+            <form onSubmit={handleAnalyze} className="px-7 py-6 space-y-5">
 
-          {aiResult && (
-            <div className="mt-6 p-5 bg-emerald-50 rounded-lg border border-emerald-200 space-y-3">
+              {/* Upload zone */}
               <div>
-                <span className="block text-xs font-semibold text-emerald-500 uppercase tracking-wider">Diagnosis</span>
-                <p className="font-medium">{aiResult.diagnosis}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-2 tracking-wide uppercase">
+                  Foto Tanaman
+                </label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  className={`${dropZoneBase} ${isDragging ? dropZoneActive : dropZoneIdle}`}
+                >
+                  {/* Icon tile */}
+                  <div className={`w-10 h-10 rounded-xl bg-white border flex items-center justify-center shadow-sm transition-all duration-300 ${isDragging ? 'border-emerald-300 scale-110' : 'border-gray-100'}`}>
+                    {isDragging ? (
+                      <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M4.5 19.5h15" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                    )}
+                  </div>
+
+                  {imageFile ? (
+                    <div className="text-center [animation:fade-in_0.3s_ease-out_forwards]">
+                      <p className="text-sm font-medium text-gray-800">{imageFile.name}</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">✓ Ready to analyse</p>
+                    </div>
+                  ) : isDragging ? (
+                    <p className="text-sm font-medium text-emerald-600">Drop to upload</p>
+                  ) : (
+                    <div className="text-center">
+                      <p className="text-sm text-gray-500">Click or drag &amp; drop</p>
+                      <p className="text-xs text-gray-400 mt-0.5">PNG, JPG, WEBP · max 10 MB</p>
+                    </div>
+                  )}
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
+                </div>
               </div>
+
+              {/* Text input */}
               <div>
-                <span className="block text-xs font-semibold text-emerald-500 uppercase tracking-wider">Rekomendasi Tindakan</span>
-                <p>{aiResult.action}</p>
+                <label className="block text-xs font-medium text-gray-500 mb-2 tracking-wide uppercase">
+                  Keluhan / Gejala
+                </label>
+                <textarea
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  rows={3}
+                  placeholder="Contoh: Daun menguning sejak 3 hari lalu, ada bercak coklat…"
+                  className="w-full rounded-2xl border border-gray-200 bg-gray-50/60 px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400/30 focus:border-emerald-300 transition-all duration-200 resize-none hover:border-gray-300"
+                />
               </div>
-              <div className="flex justify-between items-center pt-3 border-t border-emerald-200 mt-3">
-                <div>
-                  <span className="block text-xs font-semibold text-emerald-500 uppercase tracking-wider">Estimasi Biaya</span>
-                  <p className="font-bold text-lg">Rp {aiResult.costEstimate.toLocaleString('id-ID')}</p>
-                </div>
-                <div className="text-right">
-                  <span className="block text-xs font-semibold text-emerald-500 uppercase tracking-wider">ROI Status</span>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-1 ${aiResult.roiStatus === 'Positive' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                    {aiResult.roiStatus}
-                  </span>
-                </div>
-              </div>
-              
-              <button 
-                onClick={handleLogExpense}
-                disabled={logLoading}
-                className="w-full mt-4 bg-emerald-800 text-white py-2 rounded-lg font-medium hover:bg-emerald-900 transition disabled:opacity-50"
+
+              {/* Analyse CTA */}
+              <button
+                type="submit"
+                disabled={loading || (!textInput && !imageFile)}
+                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm transition-all duration-200 ease-in-out hover:bg-emerald-500 hover:-translate-y-0.5 hover:shadow-md active:scale-95 active:bg-emerald-700 active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-sm"
               >
-                {logLoading ? 'Mencatat...' : 'Beli & Catat Pengeluaran'}
+                {loading ? <><Spinner size={4} /> Menganalisis…</> : 'Analisis dengan AI'}
               </button>
-            </div>
-          )}
-        </section>
+            </form>
 
-        {/* Finance / Tracking Component */}
-        <section className="bg-white rounded-xl shadow-sm border border-emerald-100 p-6">
-          <h2 className="text-xl font-semibold mb-4 text-emerald-700">Buku Kas Operasional</h2>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b-2 border-emerald-100 text-emerald-600 text-sm">
-                  <th className="pb-3 font-semibold">Tanggal</th>
-                  <th className="pb-3 font-semibold">Item Penanganan</th>
-                  <th className="pb-3 font-semibold text-right">Nominal</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {expenses.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} className="py-8 text-center text-emerald-400 italic">
-                      Belum ada transaksi tercatat.
-                    </td>
-                  </tr>
-                ) : (
-                  expenses.map((expense) => (
-                    <tr key={expense.id} className="border-b border-emerald-50 last:border-0">
-                      <td className="py-3 text-emerald-500">{new Date(expense.timestamp).toLocaleDateString('id-ID')}</td>
-                      <td className="py-3 font-medium">{expense.item_name}</td>
-                      <td className="py-3 text-right font-semibold text-red-600">
-                        - Rp {expense.cost.toLocaleString('id-ID')}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            {/* Skeleton while loading */}
+            {loading && <ResultSkeleton />}
+
+            {/* AI result */}
+            {!loading && aiResult && (
+              <div className="mx-7 mb-7 rounded-2xl bg-gray-50/80 border border-gray-100 overflow-hidden [animation:fade-up_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+                <div className="px-5 py-4 space-y-4">
+
+                  <div>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Diagnosis</p>
+                    <p className="text-sm font-medium text-gray-900">{aiResult.diagnosis}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Rekomendasi</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{aiResult.action}</p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200/80">
+                    <div>
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Estimasi Biaya</p>
+                      <p className="text-base font-bold text-gray-900 tabular-nums">
+                        Rp {aiResult.costEstimate.toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-1">ROI Status</p>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors duration-200 ${
+                        aiResult.roiStatus === 'Positive'
+                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                          : aiResult.roiStatus === 'Negative'
+                          ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
+                          : 'bg-gray-100 text-gray-500 ring-1 ring-gray-200'
+                      }`}>
+                        {aiResult.roiStatus}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Log expense button */}
+                <div className="px-5 pb-5">
+                  <button
+                    onClick={handleLogExpense}
+                    disabled={logLoading}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-900 py-2.5 text-sm font-semibold text-white transition-all duration-200 ease-in-out hover:bg-gray-700 hover:-translate-y-0.5 hover:shadow-md active:scale-95 active:bg-black active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+                  >
+                    {logLoading ? <><Spinner size={4} /> Mencatat…</> : 'Beli & Catat Pengeluaran'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          
-          <div className="mt-6 p-4 bg-emerald-800 text-white rounded-lg flex justify-between items-center">
-            <span className="font-medium">Total Pengeluaran AI</span>
-            <span className="text-xl font-bold">
-              Rp {expenses.reduce((acc, curr) => acc + curr.cost, 0).toLocaleString('id-ID')}
-            </span>
+
+          {/* ══ Finance card ════════════════════════════════════════════ */}
+          <div className="bg-white/70 backdrop-blur-md border border-gray-100 rounded-3xl shadow-sm shadow-gray-200/60 overflow-hidden transition-shadow duration-300 hover:shadow-md [animation:fade-up_0.45s_0.1s_cubic-bezier(0.16,1,0.3,1)_both]">
+
+            {/* Card header */}
+            <div className="px-7 pt-7 pb-5 border-b border-gray-100/80 flex items-start justify-between">
+              <div>
+                <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-0.5">Module 02</p>
+                <h2 className="text-lg font-semibold text-gray-900 tracking-tight">Buku Kas Operasional</h2>
+              </div>
+              <div className={`text-right transition-all duration-500 ${expenses.length > 0 ? 'opacity-100' : 'opacity-0'}`}>
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-0.5">Total</p>
+                <p className="text-base font-bold text-gray-900 tabular-nums">
+                  Rp {totalExpenses.toLocaleString('id-ID')}
+                </p>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-7 py-6">
+              {expenses.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 gap-3 [animation:fade-in_0.35s_ease-out_forwards]">
+                  <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-3-3v6M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-400">Belum ada transaksi tercatat.</p>
+                  <p className="text-xs text-gray-300 text-center max-w-[180px]">
+                    Jalankan analisis dan catat rekomendasi sebagai pengeluaran.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto -mx-1">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr>
+                        <th className="pb-3 pr-4 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Tanggal</th>
+                        <th className="pb-3 pr-4 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Item</th>
+                        <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-widest text-right">Nominal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100/80">
+                      {expenses.map((expense, i) => (
+                        <tr
+                          key={expense.id}
+                          style={{ animationDelay: `${i * 40}ms` }}
+                          className="[animation:fade-up_0.4s_cubic-bezier(0.16,1,0.3,1)_both] transition-colors duration-150 hover:bg-gray-50/60"
+                        >
+                          <td className="py-3 pr-4 text-xs text-gray-400 whitespace-nowrap">
+                            {new Date(expense.timestamp).toLocaleDateString('id-ID', {
+                              day: '2-digit', month: 'short', year: 'numeric',
+                            })}
+                          </td>
+                          <td className="py-3 pr-4 font-medium text-gray-800 max-w-[140px] truncate">
+                            {expense.item_name}
+                          </td>
+                          <td className="py-3 text-right font-semibold text-gray-700 tabular-nums">
+                            Rp {expense.cost.toLocaleString('id-ID')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Total bar */}
+            {expenses.length > 0 && (
+              <div className="mx-7 mb-7 rounded-2xl bg-gray-900 px-5 py-4 flex items-center justify-between [animation:fade-up_0.45s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+                <p className="text-xs font-medium text-gray-400">Total Pengeluaran</p>
+                <p className="text-base font-bold text-white tabular-nums">
+                  Rp {totalExpenses.toLocaleString('id-ID')}
+                </p>
+              </div>
+            )}
           </div>
-        </section>
-      </div>
+
+        </div>
+
+        <p className="mt-14 text-center text-[11px] text-gray-300 tracking-wide">
+          AgroSense &copy; {new Date().getFullYear()} &mdash; Powered by FastAPI &amp; Astra DB
+        </p>
+      </main>
     </div>
   );
 }
