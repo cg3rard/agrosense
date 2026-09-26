@@ -3,19 +3,29 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND = process.env.BACKEND_URL ?? 'http://localhost:8000';
 
 export async function POST(req: NextRequest) {
-  let body: unknown;
+  // The browser sends multipart/form-data with a proper boundary.
+  // We forward the raw body and Content-Type header as-is so the
+  // FastAPI UploadFile/Form parser receives an intact multipart stream.
+  let formData: FormData;
   try {
-    body = await req.json();
+    formData = await req.formData();
   } catch {
-    return NextResponse.json({ detail: 'Invalid JSON in request body.' }, { status: 400 });
+    return NextResponse.json({ detail: 'Invalid or missing form data.' }, { status: 400 });
+  }
+
+  // Rebuild the FormData to forward to the backend.
+  // We cannot simply pipe req.body because Next.js has already consumed it.
+  const outForm = new FormData();
+  for (const [key, value] of formData.entries()) {
+    outForm.append(key, value);
   }
 
   let upstream: Response;
   try {
     upstream = await fetch(`${BACKEND}/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      // Do NOT set Content-Type — fetch sets the correct multipart boundary automatically.
+      body: outForm,
     });
   } catch (err) {
     console.error('[/api/analyze] Backend unreachable:', err);

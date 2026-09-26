@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AnalyzeResponse, TransactionResponse } from "@/types";
 
 const API_BASE = "http://localhost:8000";
@@ -33,22 +33,16 @@ export default function FinanceTracker({
   pendingAnalysis,
   onExpenseLogged,
 }: FinanceTrackerProps) {
-  const [expenses, setExpenses] = useState<TransactionResponse[]>([]);
+  const [expenses, setExpenses] = useState<TransactionResponse[]>(() => {
+    // Lazy initializer reads from sessionStorage once on mount — no effect needed
+    if (typeof window === "undefined") return [];
+    const stored = sessionStorage.getItem("agrosense_expenses");
+    if (!stored) return [];
+    try { return JSON.parse(stored) as TransactionResponse[]; } catch { return []; }
+  });
   const [logging, setLogging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Persist expenses in sessionStorage so they survive re-renders
-  useEffect(() => {
-    const stored = sessionStorage.getItem("agrosense_expenses");
-    if (stored) {
-      try {
-        setExpenses(JSON.parse(stored));
-      } catch {
-        // ignore malformed data
-      }
-    }
-  }, []);
 
   const persistExpenses = (updated: TransactionResponse[]) => {
     setExpenses(updated);

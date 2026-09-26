@@ -1,8 +1,3 @@
-export interface AnalyzeRequest {
-  image_url: string;
-  text: string;
-}
-
 export interface AnalyzeResponse {
   diagnosis: string;
   recommended_action: string;
@@ -21,4 +16,12 @@ export interface TransactionResponse {
   item_name: string;
   cost: number;
   timestamp: string;
+}
+
+export interface DiagnosisHistory {
+  id: string;
+  timestamp: string;
+  symptomText: string;
+  imageName?: string;
+  result: AnalyzeResponse;
 }

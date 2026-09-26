@@ -17,6 +17,10 @@ frontend/node_modules
 frontend/.next
 frontend/.next/cache
 
+# Dev-only Docker files (excluded from production build context)
+**/Dockerfile.dev
+docker-compose.dev.yml
+
 # Misc
 **/*.log
 *.md
