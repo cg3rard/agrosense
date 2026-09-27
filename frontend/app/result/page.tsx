@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useMemo, useState } from "react";
+import type { DiagnosisHistory } from "@/types";
 import { useAgroSense } from "../context/agrosense";
 
 /* ── Icons ────────────────────────────────────────────────────────────────── */
@@ -121,6 +123,57 @@ function IconMinus() {
     </svg>
   );
 }
+function IconClock() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="w-5 h-5 text-[var(--brand)]"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+      />
+    </svg>
+  );
+}
+function IconTrash() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="w-3.5 h-3.5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+      />
+    </svg>
+  );
+}
+function IconArrowRight() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="w-4 h-4 text-gray-300 group-hover:text-[var(--brand)] group-hover:translate-x-0.5 transition-all duration-300 shrink-0"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+      />
+    </svg>
+  );
+}
 
 /* ── ROI status normalisation ────────────────────────────────────────────── */
 type RoiKind = "Positive" | "Negative" | "Neutral";
@@ -228,10 +281,233 @@ function MetricBlock({
   );
 }
 
+/* ── Riwayat: satu baris hasil diagnosis sebelumnya ──────────────────────── */
+function formatHistoryDate(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function HistoryRow({
+  entry,
+  active,
+  onSelect,
+}: {
+  entry: DiagnosisHistory;
+  active: boolean;
+  onSelect: (e: DiagnosisHistory) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(entry)}
+      style={{ transitionTimingFunction: "var(--ease-out)" }}
+      className={`w-full text-left flex items-start gap-4 px-5 sm:px-8 py-4 group transition-colors duration-300 ${
+        active ? "bg-[var(--brand-light)]/50" : "hover:bg-gray-50/80"
+      }`}
+    >
+      {/* thumbnail / fallback */}
+      <div className="icon-tile w-10 h-10 shrink-0 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+        {entry.imageName ? (
+          <span className="text-[10px] font-bold text-[var(--brand)] uppercase">
+            {entry.imageName.slice(0, 3)}
+          </span>
+        ) : (
+          <IconLeaf />
+        )}
+      </div>
+
+      {/* info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-gray-900 truncate max-w-full">
+            {entry.result.diagnosis}
+          </p>
+          {active && (
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--brand)] bg-[var(--brand-light)] rounded-full px-2 py-0.5 shrink-0">
+              Ditampilkan
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-[var(--fg-tertiary)] mt-0.5 line-clamp-1">
+          {entry.symptomText?.trim()
+            ? entry.symptomText.trim()
+            : "Tidak ada deskripsi gejala"}
+        </p>
+        <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+          <span className="text-[11px] text-[var(--fg-tertiary)] tabular-nums">
+            {formatHistoryDate(entry.timestamp)}
+          </span>
+          <span className="text-[11px] font-semibold text-gray-700 tabular-nums">
+            Rp {entry.result.cost_estimate.toLocaleString("id-ID")}
+          </span>
+        </div>
+      </div>
+
+      {/* meta */}
+      <div className="flex items-center gap-3 shrink-0 self-center">
+        <RoiBadge status={entry.result.roi_status} />
+        <IconArrowRight />
+      </div>
+    </button>
+  );
+}
+
+/* ── Riwayat Diagnosis (list hasil sebelumnya) ───────────────────────────── */
+function HistorySection({
+  history,
+  hydrated,
+  activeId,
+  onSelect,
+  onClear,
+}: {
+  history: DiagnosisHistory[];
+  hydrated: boolean;
+  activeId: string | null;
+  onSelect: (e: DiagnosisHistory) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div
+      className="bg-white rounded-3xl border border-gray-100 shadow-[var(--shadow-card)] overflow-hidden animate-fade-up"
+      style={{ animationDelay: "100ms" }}
+    >
+      {/* header */}
+      <div className="px-5 sm:px-8 py-6 border-b border-gray-100/70 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="icon-tile w-9 h-9 shrink-0">
+            <IconClock />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 tracking-tight">
+              Riwayat Hasil Diagnosis
+            </h2>
+            <p className="text-xs text-[var(--fg-tertiary)] mt-0.5">
+              {hydrated && history.length > 0
+                ? `${history.length} hasil tersimpan — klik untuk melihat rangkumannya`
+                : "Tersimpan di browser ini — privat & tidak dikirim ke server"}
+            </p>
+          </div>
+        </div>
+        {hydrated && history.length > 0 && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--fg-tertiary)] hover:text-red-500 border border-gray-200 hover:border-red-200 rounded-full px-3 py-1.5 transition-colors duration-200 shrink-0"
+          >
+            <IconTrash /> Hapus Semua
+          </button>
+        )}
+      </div>
+
+      {/* body */}
+      {!hydrated ? (
+        <div className="divide-y divide-gray-100/80">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="px-5 sm:px-8 py-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-1/3 rounded bg-gray-100 animate-pulse" />
+                <div className="h-2.5 w-2/3 rounded bg-gray-100 animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : history.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 px-8 py-14 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+            <IconClock />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-700">
+              Belum ada riwayat diagnosis
+            </p>
+            <p className="text-xs text-[var(--fg-tertiary)] mt-1 max-w-xs leading-relaxed">
+              Setiap diagnosis yang Anda lakukan akan tersimpan di sini sebagai
+              referensi cepat.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="divide-y divide-gray-100/80">
+            {history.map((entry) => (
+              <HistoryRow
+                key={entry.id}
+                entry={entry}
+                active={entry.id === activeId}
+                onSelect={onSelect}
+              />
+            ))}
+          </div>
+          <div className="px-5 sm:px-8 py-4 border-t border-gray-100/70 bg-gray-50/40 flex items-center justify-between gap-4">
+            <p className="text-[11px] text-[var(--fg-tertiary)]">
+              Maksimal 20 hasil terakhir. Data hilang jika cache browser
+              dihapus.
+            </p>
+            <button
+              type="button"
+              onClick={onClear}
+              className="sm:hidden flex items-center gap-1.5 text-xs text-[var(--fg-tertiary)] hover:text-red-500 shrink-0"
+            >
+              <IconTrash /> Hapus
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ── Page inner ───────────────────────────────────────────────────────────── */
 function ResultInner() {
   const router = useRouter();
-  const { latestResult, resultHydrated } = useAgroSense();
+  const {
+    latestResult,
+    resultHydrated,
+    setLatestResult,
+    history,
+    historyHydrated,
+    clearHistory,
+  } = useAgroSense();
+
+  /* id riwayat yang sedang ditampilkan — diklik manual, atau dicocokkan
+     dengan hasil terakhir yang tersimpan di sesi ini */
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const activeId = useMemo(() => {
+    if (selectedId) return selectedId;
+    if (!latestResult) return null;
+    const match = history.find(
+      (h) => JSON.stringify(h.result) === JSON.stringify(latestResult),
+    );
+    return match?.id ?? null;
+  }, [selectedId, latestResult, history]);
+
+  const handleSelectHistory = (entry: DiagnosisHistory) => {
+    setSelectedId(entry.id);
+    setLatestResult(entry.result);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const historySection = (
+    <HistorySection
+      history={history}
+      hydrated={historyHydrated}
+      activeId={activeId}
+      onSelect={handleSelectHistory}
+      onClear={() => {
+        setSelectedId(null);
+        clearHistory();
+      }}
+    />
+  );
 
   /* Show a loading pulse while the context re-syncs with sessionStorage on mount */
   if (!resultHydrated) {
@@ -264,27 +540,32 @@ function ResultInner() {
   if (!latestResult) {
     return (
       <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
-        <main className="flex-1 pt-[52px] flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4 text-center px-6 py-16">
-            <div className="icon-tile w-14 h-14">
-              <IconLeaf />
+        <main className="flex-1 pt-[52px]">
+          <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-[var(--shadow-card)] flex flex-col items-center gap-4 text-center px-6 py-16 animate-fade-up">
+              <div className="icon-tile w-14 h-14">
+                <IconLeaf />
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-gray-900">
+                  Belum ada hasil
+                </p>
+                <p className="text-sm text-[var(--fg-tertiary)] mt-1 max-w-sm leading-relaxed">
+                  Anda belum melakukan diagnosis tanaman pada sesi ini. Pilih
+                  salah satu riwayat di bawah, atau mulai diagnosis baru.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push("/diagnosis")}
+                style={{ transitionTimingFunction: "var(--ease-out)" }}
+                className="mt-2 inline-flex items-center gap-2 bg-[var(--brand)] hover:bg-[var(--brand-mid)] text-white font-semibold rounded-2xl px-6 py-3 text-sm shadow-[var(--shadow-brand)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] active:scale-95 transition-all duration-300"
+              >
+                Mulai Diagnosis
+              </button>
             </div>
-            <div>
-              <p className="text-lg font-semibold text-gray-900">
-                Belum ada hasil
-              </p>
-              <p className="text-sm text-[var(--fg-tertiary)] mt-1 max-w-sm leading-relaxed">
-                Anda belum melakukan diagnosis tanaman pada sesi ini. Mulai
-                diagnosis untuk melihat rekomendasi AI di sini.
-              </p>
-            </div>
-            <button
-              onClick={() => router.push("/diagnosis")}
-              style={{ transitionTimingFunction: "var(--ease-out)" }}
-              className="mt-2 inline-flex items-center gap-2 bg-[var(--brand)] hover:bg-[var(--brand-mid)] text-white font-semibold rounded-2xl px-6 py-3 text-sm shadow-[var(--shadow-brand)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] active:scale-95 transition-all duration-300"
-            >
-              Mulai Diagnosis
-            </button>
+
+            {/* ══ RIWAYAT HASIL SEBELUMNYA ═══════════════════════════════ */}
+            {historySection}
           </div>
         </main>
       </div>
@@ -458,6 +739,9 @@ function ResultInner() {
               </div>
             </div>
           </div>
+
+          {/* ══ RIWAYAT HASIL SEBELUMNYA ═══════════════════════════════ */}
+          {historySection}
 
           {/* ══ BOTTOM NAVIGATION ═══════════════════════════════════════ */}
           <div
