@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -465,8 +466,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           {/* brand */}
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-[var(--brand)] flex items-center justify-center">
-              <span className="text-white text-[10px] font-bold">A</span>
+            <div className="w-6 h-6 rounded-lg overflow-hidden shrink-0">
+              <Image src="/favicon.jpg" alt="AgroSense" width={24} height={24} className="w-full h-full object-cover" />
             </div>
             <span className="text-xs font-semibold text-gray-700 tracking-tight">
               AgroSense

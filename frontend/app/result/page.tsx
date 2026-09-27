@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useAgroSense } from "../context/agrosense";
 
 /* ── Icons ────────────────────────────────────────────────────────────────── */
@@ -487,8 +488,8 @@ function ResultInner() {
       <footer className="py-8 border-t border-gray-100/80 bg-white mt-4">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-lg bg-[var(--brand)] flex items-center justify-center">
-              <span className="text-white text-[9px] font-bold">A</span>
+            <div className="w-5 h-5 rounded-lg overflow-hidden shrink-0">
+              <Image src="/favicon.jpg" alt="AgroSense" width={20} height={20} className="w-full h-full object-cover" />
             </div>
             <span className="text-xs font-semibold text-gray-600">
               AgroSense

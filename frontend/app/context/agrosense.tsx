@@ -31,6 +31,8 @@ interface AgroSenseState {
   clearHistory: () => void;
   /** true once the initial client-side sessionStorage read has completed */
   resultHydrated: boolean;
+  /** true once the initial client-side localStorage read for history has completed */
+  historyHydrated: boolean;
 }
 
 const AgroSenseContext = createContext<AgroSenseState | null>(null);
@@ -62,14 +64,23 @@ export function AgroSenseProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const [history, setHistory] = useState<DiagnosisHistory[]>(() => {
-    if (typeof window === 'undefined') return [];
+  const [history, setHistory] = useState<DiagnosisHistory[]>([]);
+  const [historyHydrated, setHistoryHydrated] = useState(false);
+
+  // History is only ever meaningful on the client (localStorage). Reading it
+  // during the lazy useState initializer would make the server render "[]"
+  // while the client renders the real stored list, causing a hydration
+  // mismatch. Instead, always start from "[]" and re-sync after mount.
+  useEffect(() => {
     try {
-      return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
+      const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]');
+      if (Array.isArray(stored) && stored.length > 0) setHistory(stored);
     } catch {
-      return [];
+      // ignore malformed storage
+    } finally {
+      setHistoryHydrated(true);
     }
-  });
+  }, []);
 
   const addHistory = useCallback((entry: DiagnosisHistory) => {
     setHistory(prev => {
@@ -86,7 +97,7 @@ export function AgroSenseProvider({ children }: { children: ReactNode }) {
 
   return (
     <AgroSenseContext.Provider
-      value={{ latestResult, setLatestResult, history, addHistory, clearHistory, resultHydrated }}
+      value={{ latestResult, setLatestResult, history, addHistory, clearHistory, resultHydrated, historyHydrated }}
     >
       {children}
     </AgroSenseContext.Provider>

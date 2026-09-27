@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
@@ -67,11 +68,11 @@ export default function AppNavbar() {
           className="flex items-center gap-2 shrink-0 group"
         >
           <div
-            className="w-7 h-7 rounded-xl bg-[var(--brand)] flex items-center justify-center
+            className="w-7 h-7 rounded-xl overflow-hidden shrink-0
               shadow-[var(--shadow-brand)] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-105"
             style={{ transitionTimingFunction: 'var(--ease-spring)' }}
           >
-            <span className="text-white text-xs font-bold select-none">A</span>
+            <Image src="/favicon.jpg" alt="AgroSense" width={28} height={28} className="w-full h-full object-cover" priority />
           </div>
           <span className="text-sm font-semibold text-gray-900 tracking-tight">AgroSense</span>
         </Link>

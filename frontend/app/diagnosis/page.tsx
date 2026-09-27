@@ -136,7 +136,7 @@ function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: Di
 /* ── main inner component ────────────────────────────────────────────────── */
 function DiagnosisInner() {
   const router = useRouter();
-  const { setLatestResult, history, addHistory, clearHistory } = useAgroSense();
+  const { setLatestResult, history, addHistory, clearHistory, historyHydrated } = useAgroSense();
 
   const [textInput, setTextInput]         = useState('');
   const [imageFile, setImageFile]         = useState<File | null>(null);
@@ -469,7 +469,7 @@ function DiagnosisInner() {
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900 tracking-tight">Riwayat Diagnosis Lokal</h2>
                   <p className="text-xs text-[var(--fg-tertiary)] mt-0.5">
-                    {history.length > 0
+                    {historyHydrated && history.length > 0
                       ? `${history.length} pemeriksaan tersimpan di browser ini`
                       : 'Tersimpan di memori browser — privat & tidak dikirim ke server'}
                   </p>
@@ -528,8 +528,8 @@ function DiagnosisInner() {
       <footer className="py-8 border-t border-gray-100/80 bg-white mt-4">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-lg bg-[var(--brand)] flex items-center justify-center">
-              <span className="text-white text-[9px] font-bold">A</span>
+            <div className="w-5 h-5 rounded-lg overflow-hidden shrink-0">
+              <Image src="/favicon.jpg" alt="AgroSense" width={20} height={20} className="w-full h-full object-cover" />
             </div>
             <span className="text-xs font-semibold text-gray-600">AgroSense</span>
           </div>

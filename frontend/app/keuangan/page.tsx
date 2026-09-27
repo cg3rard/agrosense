@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import type { FinanceEntryResponse, FinanceEntryType } from '@/types';
+import Reveal from '@/components/Reveal';
 
 /* ── Icons ────────────────────────────────────────────────────────────────── */
 function IconWallet() {
@@ -193,14 +195,14 @@ export default function KeuanganPage() {
         <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
 
           {/* ══ SUMMARY HIGHLIGHT ══════════════════════════════════════ */}
-          <div className="grid sm:grid-cols-3 gap-4">
+          <Reveal className="grid sm:grid-cols-3 gap-4">
             <SummaryCard label="Total Pemasukan" amount={totalIncome} icon={<IconArrowUp />} tone="income" />
             <SummaryCard label="Total Pengeluaran" amount={totalExpense} icon={<IconArrowDown />} tone="expense" />
             <SummaryCard label="Saldo" amount={balance} icon={<IconScale />} tone="balance" />
-          </div>
+          </Reveal>
 
           {/* ══ FORM ═══════════════════════════════════════════════════ */}
-          <div className="card-elevated rounded-3xl overflow-hidden">
+          <Reveal delayMs={80} className="card-elevated rounded-3xl overflow-hidden">
             <div className="px-5 sm:px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
               <div className="icon-tile w-8 h-8 shrink-0">
                 <IconWallet />
@@ -292,10 +294,10 @@ export default function KeuanganPage() {
                 {submitting ? <><Spinner /> Menyimpan…</> : `Simpan ${type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}`}
               </button>
             </form>
-          </div>
+          </Reveal>
 
           {/* ══ RIWAYAT TRANSAKSI ══════════════════════════════════════ */}
-          <div className="card-elevated rounded-3xl overflow-hidden">
+          <Reveal delayMs={160} className="card-elevated rounded-3xl overflow-hidden">
             <div className="px-5 sm:px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
               <div className="icon-tile w-8 h-8 shrink-0">
                 <IconWallet />
@@ -346,7 +348,7 @@ export default function KeuanganPage() {
                 </div>
               )}
             </div>
-          </div>
+          </Reveal>
 
         </div>
       </main>
@@ -355,8 +357,8 @@ export default function KeuanganPage() {
       <footer className="py-8 border-t border-gray-100/80 bg-white mt-4">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-lg bg-[var(--brand)] flex items-center justify-center">
-              <span className="text-white text-[9px] font-bold">A</span>
+            <div className="w-5 h-5 rounded-lg overflow-hidden shrink-0">
+              <Image src="/favicon.jpg" alt="AgroSense" width={20} height={20} className="w-full h-full object-cover" />
             </div>
             <span className="text-xs font-semibold text-gray-600">AgroSense</span>
           </div>

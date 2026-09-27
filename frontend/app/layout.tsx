@@ -9,6 +9,11 @@ export const metadata: Metadata = {
   title: 'AgroSense — AI Agronomist & Financial OS',
   description:
     'Diagnosa kondisi tanaman dengan AI dan kelola pengeluaran operasional kebun Anda.',
+  icons: {
+    icon: '/favicon.jpg',
+    shortcut: '/favicon.jpg',
+    apple: '/favicon.jpg',
+  },
 };
 
 export const viewport: Viewport = {
