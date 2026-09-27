@@ -50,6 +50,13 @@ services:
       BACKEND_URL: http://backend:8000
       # Tell Next.js dev server to accept connections from all hosts inside Docker.
       HOSTNAME: "0.0.0.0"
+      # Bind-mounted volumes on Windows/macOS don't always propagate native
+      # filesystem change events reliably into the Linux container, which can
+      # make hot-reload feel slow or inconsistent. Force polling every 100ms
+      # as a fast, reliable fallback so file edits are always picked up.
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "100"
     volumes:
       # Bind-mount source so HMR sees every file change on the host.
       - ./frontend:/app

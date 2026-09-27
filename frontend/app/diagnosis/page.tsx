@@ -98,10 +98,11 @@ function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: Di
   return (
     <button
       onClick={() => onView(entry)}
-      className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors duration-150 group"
+      className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-gray-50/80 transition-all duration-300 group"
+      style={{ transitionTimingFunction: 'var(--ease-out)' }}
     >
       {/* thumbnail or fallback */}
-      <div className="w-10 h-10 rounded-xl bg-[var(--brand-light)] flex items-center justify-center shrink-0 overflow-hidden">
+      <div className="icon-tile w-10 h-10 shrink-0 overflow-hidden group-hover:scale-105">
         {entry.imageName ? (
           <span className="text-[10px] font-bold text-[var(--brand)] uppercase">{entry.imageName.slice(0, 3)}</span>
         ) : (
@@ -246,14 +247,14 @@ function DiagnosisInner() {
           )}
 
           {/* ══ INPUT FORM ════════════════════════════════════════════════ */}
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-[var(--shadow-card)] overflow-hidden animate-fade-up">
+          <div className="card-elevated rounded-3xl overflow-hidden animate-fade-up">
 
-            <div className="px-8 pt-8 pb-6 border-b border-gray-100/60">
+            <div className="px-5 sm:px-8 pt-8 pb-6 border-b border-gray-100/60">
               <h2 className="text-base font-semibold text-gray-900 tracking-tight">Input Data Tanaman</h2>
               <p className="text-xs text-[var(--fg-tertiary)] mt-1">Isi minimal satu input — foto atau deskripsi gejala</p>
             </div>
 
-            <form onSubmit={handleAnalyze} className="px-8 py-8 space-y-8">
+            <form onSubmit={handleAnalyze} className="px-5 sm:px-8 py-8 space-y-8">
 
               {/* ── Upload foto ── */}
               <div className="space-y-3">
@@ -299,18 +300,24 @@ function DiagnosisInner() {
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
+                    style={{ transitionTimingFunction: 'var(--ease-spring)' }}
                     className={[
                       'relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed',
                       'cursor-pointer py-12 px-6 select-none transition-all duration-300',
                       isDragging
-                        ? 'border-emerald-500 bg-emerald-50/60 scale-[0.99]'
+                        ? 'border-emerald-500 bg-emerald-50/60 scale-[0.98]'
                         : 'border-gray-200 bg-gray-50/40 hover:border-emerald-300 hover:bg-emerald-50/20',
                     ].join(' ')}
                   >
-                    <div className={[
-                      'w-14 h-14 rounded-2xl bg-white border flex items-center justify-center shadow-sm transition-all duration-300',
-                      isDragging ? 'border-emerald-300 scale-110 shadow-md' : 'border-gray-100',
-                    ].join(' ')}>
+                    <div
+                      style={{ transitionTimingFunction: 'var(--ease-spring)' }}
+                      className={[
+                        'w-14 h-14 rounded-2xl bg-white border flex items-center justify-center transition-all duration-300',
+                        isDragging
+                          ? 'border-emerald-300 scale-110 shadow-[var(--shadow-elevated)]'
+                          : 'border-gray-100 shadow-[var(--shadow-xs)]',
+                      ].join(' ')}
+                    >
                       <IconUpload dragging={isDragging} />
                     </div>
 
@@ -375,7 +382,8 @@ function DiagnosisInner() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="w-full flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-100 disabled:text-gray-400 text-white font-semibold rounded-2xl py-4 text-sm shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+                style={{ transitionTimingFunction: 'var(--ease-out)' }}
+                className="w-full flex items-center justify-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-100 disabled:text-gray-400 text-white font-semibold rounded-2xl py-4 text-sm shadow-[var(--shadow-brand)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] active:scale-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
               >
                 {loading ? (
                   <><Spinner /> <span>Menganalisis… mohon tunggu</span></>
@@ -392,7 +400,7 @@ function DiagnosisInner() {
 
             {/* loading skeleton */}
             {loading && (
-              <div className="px-8 pb-8 animate-fade-in">
+              <div className="px-5 sm:px-8 pb-8 animate-fade-in">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -405,8 +413,8 @@ function DiagnosisInner() {
 
             {/* inline result preview */}
             {!loading && pendingResult && (
-              <div className="px-8 pb-8 animate-fade-up">
-                <div className="rounded-2xl border border-gray-100 bg-gray-50/60 overflow-hidden">
+              <div className="px-5 sm:px-8 pb-8 animate-fade-up">
+                <div className="rounded-2xl border border-gray-100 bg-gray-50/60 overflow-hidden shadow-[var(--shadow-xs)]">
                   {/* result header */}
                   <div className="bg-emerald-50 border-b border-emerald-100/60 px-5 py-3 flex items-center gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-emerald-600 shrink-0">
@@ -438,7 +446,8 @@ function DiagnosisInner() {
                   <div className="px-5 pb-5">
                     <button
                       onClick={() => router.push('/result')}
-                      className="w-full rounded-2xl bg-gray-900 text-white py-3 text-sm font-semibold hover:bg-gray-700 hover:-translate-y-0.5 hover:shadow-md active:scale-95 transition-all duration-200"
+                      style={{ transitionTimingFunction: 'var(--ease-out)' }}
+                      className="w-full rounded-2xl bg-gray-900 text-white py-3 text-sm font-semibold hover:bg-gray-700 hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] active:scale-95 transition-all duration-300"
                     >
                       Lihat Detail Lengkap
                     </button>
@@ -449,12 +458,12 @@ function DiagnosisInner() {
           </div>
 
           {/* ══ LOCAL HISTORY ═════════════════════════════════════════════ */}
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-[var(--shadow-card)] overflow-hidden animate-fade-up" style={{ animationDelay: '80ms' }}>
+          <div className="card-elevated rounded-3xl overflow-hidden animate-fade-up" style={{ animationDelay: '80ms' }}>
 
             {/* section header */}
-            <div className="px-8 py-6 border-b border-gray-100/60 flex items-center justify-between gap-4">
+            <div className="px-5 sm:px-8 py-6 border-b border-gray-100/60 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center">
+                <div className="icon-tile w-8 h-8">
                   <IconClock />
                 </div>
                 <div>

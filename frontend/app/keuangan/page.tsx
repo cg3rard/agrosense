@@ -59,7 +59,10 @@ function SummaryCard({
   };
   const s = styles[tone];
   return (
-    <div className={`rounded-2xl border px-6 py-5 flex items-start gap-4 ${s.bg}`}>
+    <div
+      style={{ transitionTimingFunction: 'var(--ease-out)' }}
+      className={`rounded-2xl border px-6 py-5 flex items-start gap-4 shadow-[var(--shadow-card)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[var(--shadow-elevated)] ${s.bg}`}
+    >
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${s.iconBg}`}>
         {icon}
       </div>
@@ -79,7 +82,7 @@ function SummaryCard({
 function EntryRow({ entry }: { entry: FinanceEntryResponse }) {
   const isIncome = entry.type === 'income';
   return (
-    <tr className="hover:bg-gray-50/60 transition-colors duration-150">
+    <tr className="hover:bg-gray-50/70 transition-colors duration-300" style={{ transitionTimingFunction: 'var(--ease-out)' }}>
       <td className="py-3 pr-4 text-xs text-[var(--fg-tertiary)] whitespace-nowrap">
         {new Date(entry.timestamp).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
       </td>
@@ -197,15 +200,15 @@ export default function KeuanganPage() {
           </div>
 
           {/* ══ FORM ═══════════════════════════════════════════════════ */}
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-[var(--shadow-card)] overflow-hidden">
-            <div className="px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center shrink-0">
+          <div className="card-elevated rounded-3xl overflow-hidden">
+            <div className="px-5 sm:px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
+              <div className="icon-tile w-8 h-8 shrink-0">
                 <IconWallet />
               </div>
               <h2 className="text-sm font-semibold text-gray-900 tracking-tight">Catat Transaksi Baru</h2>
             </div>
 
-            <form onSubmit={handleSubmit} className="px-8 py-6 space-y-5">
+            <form onSubmit={handleSubmit} className="px-5 sm:px-8 py-6 space-y-5">
               {formError && (
                 <div className="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
                   {formError}
@@ -283,7 +286,8 @@ export default function KeuanganPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold rounded-2xl py-3.5 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+                style={{ transitionTimingFunction: 'var(--ease-out)' }}
+                className="w-full flex items-center justify-center gap-2 bg-gray-900 hover:bg-gray-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold rounded-2xl py-3.5 text-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] active:scale-95 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
               >
                 {submitting ? <><Spinner /> Menyimpan…</> : `Simpan ${type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}`}
               </button>
@@ -291,15 +295,15 @@ export default function KeuanganPage() {
           </div>
 
           {/* ══ RIWAYAT TRANSAKSI ══════════════════════════════════════ */}
-          <div className="bg-white border border-gray-100 rounded-3xl shadow-[var(--shadow-card)] overflow-hidden">
-            <div className="px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[var(--brand-light)] text-[var(--brand)] flex items-center justify-center shrink-0">
+          <div className="card-elevated rounded-3xl overflow-hidden">
+            <div className="px-5 sm:px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
+              <div className="icon-tile w-8 h-8 shrink-0">
                 <IconWallet />
               </div>
               <h2 className="text-sm font-semibold text-gray-900 tracking-tight">Riwayat Transaksi</h2>
             </div>
 
-            <div className="px-8 py-6">
+            <div className="px-5 sm:px-8 py-6">
               {listError ? (
                 <div className="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
                   {listError}
