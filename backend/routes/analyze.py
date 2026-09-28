@@ -3,11 +3,13 @@ import json
 import logging
 import mimetypes
 import re
+from dataclasses import dataclass
 from typing import Optional
 
 import httpx
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
-from schemas import AnalyzeResponse
+from roi import RoiInputs, compute_roi
+from schemas import AnalyzeResponse, RoiBreakdown
 from config import settings
 
 router = APIRouter()
@@ -16,8 +18,11 @@ logger = logging.getLogger(__name__)
 # Maximum file size accepted: 10 MB
 _MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
-# Required output fields and their defaults when a field is missing
+# Fields we try to read from the LLM output.
+# `roi_status` is still accepted but only kept as the model's *opinion* — the
+# authoritative status is computed by roi.compute_roi().
 _REQUIRED_FIELDS = ("diagnosis", "recommended_action", "cost_estimate", "roi_status")
+_NUMERIC_HINT_FIELDS = ("expected_yield_loss_percent", "treatment_effectiveness_percent")
 _FIELD_DEFAULTS: dict[str, str | float] = {
     "diagnosis": "Tidak diketahui",
     "recommended_action": "Konsultasikan dengan agronomis.",
@@ -26,9 +31,64 @@ _FIELD_DEFAULTS: dict[str, str | float] = {
 }
 
 
+@dataclass
+class FarmParams:
+    """Parameter kebun yang dikirim penampil/petani untuk perhitungan ROI."""
+
+    land_area_ha: Optional[float] = None
+    yield_per_ha_kg: Optional[float] = None
+    price_per_kg: Optional[float] = None
+    yield_loss_percent: Optional[float] = None
+    effectiveness_percent: Optional[float] = None
+
+
+def _to_float(value: object) -> Optional[float]:
+    """
+    Konversi nilai bebas dari LLM menjadi float.
+
+    Menangani "Rp 150.000", "150,000", "30%", "1.5", dan angka biasa.
+    Mengembalikan None bila tidak ada digit yang bisa dibaca.
+    """
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    text = str(value).strip()
+    # Buang simbol mata uang, satuan, dan spasi
+    text = re.sub(r"(?i)(rp|idr|%|/kg|per\s*kg|kg|ha)", "", text).strip()
+    text = text.replace(" ", "")
+    if not re.search(r"\d", text):
+        return None
+
+    has_dot, has_comma = "." in text, "," in text
+    if has_dot and has_comma:
+        # Format id-ID: titik ribuan, koma desimal
+        text = text.replace(".", "").replace(",", ".")
+    elif has_comma:
+        text = text.replace(",", "") if re.fullmatch(r"\d{1,3}(,\d{3})+", text) else text.replace(",", ".")
+    elif has_dot:
+        # "150.000" = ribuan, "1.5" = desimal
+        if re.fullmatch(r"\d{1,3}(\.\d{3})+", text):
+            text = text.replace(".", "")
+
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    return float(match.group()) if match else None
+
+
 def _image_to_data_uri(content: bytes, mime: str) -> str:
     """Encode raw image bytes as a base64 data URI."""
     return f"data:{mime};base64,{base64.b64encode(content).decode()}"
+
+
+# Diminta ke LLM sebagai tambahan — dipakai sebagai input rumus ROI.
+_EXTRA_FIELD_INSTRUCTION = (
+    "Sertakan juga dua angka ini pada output (angka saja, tanpa satuan): "
+    "expected_yield_loss_percent = perkiraan persentase kehilangan hasil panen "
+    "bila gejala ini dibiarkan tanpa tindakan; "
+    "treatment_effectiveness_percent = perkiraan persentase kerugian tersebut "
+    "yang dapat diselamatkan oleh recommended_action."
+)
 
 
 def build_langflow_payload(text: str, image_data_uri: Optional[str]) -> dict:
@@ -39,11 +99,18 @@ def build_langflow_payload(text: str, image_data_uri: Optional[str]) -> dict:
     When an image is present, we prepend a compact data URI so the LLM
     can reference it (works with vision-capable models in Langflow).
     If no image is provided, we send the text description alone.
+
+    We also append a request for two extra numeric fields
+    (`expected_yield_loss_percent`, `treatment_effectiveness_percent`) which
+    feed the deterministic ROI formula. Both are optional — if the flow does
+    not return them, roi.compute_roi() falls back to documented defaults.
     """
     if image_data_uri:
         input_value = f"[IMAGE]{image_data_uri}[/IMAGE]\n{text}"
     else:
         input_value = text
+
+    input_value = f"{input_value}\n\n{_EXTRA_FIELD_INSTRUCTION}"
 
     return {
         "input_value": input_value,
@@ -75,7 +142,8 @@ def _fallback_parse(text: str) -> Optional[dict]:
     result: dict[str, str] = {}
     # Match lines like "key: value" or "**key**: value" (case-insensitive)
     pattern = re.compile(
-        r"^\s*\**(?P<key>diagnosis|recommended_action|cost_estimate|roi_status)\**\s*[:\-]\s*(?P<value>.+)$",
+        r"^\s*\**(?P<key>diagnosis|recommended_action|cost_estimate|roi_status"
+        r"|expected_yield_loss_percent|treatment_effectiveness_percent)\**\s*[:\-]\s*(?P<value>.+)$",
         re.IGNORECASE | re.MULTILINE,
     )
     for match in pattern.finditer(text):
@@ -101,7 +169,67 @@ def _extract_output_text(data: dict) -> str:
     return data["outputs"][0]["outputs"][0]["results"]["message"]["data"]["text"]
 
 
-def parse_langflow_response(raw_text: str) -> AnalyzeResponse:
+def build_analyze_response(parsed: dict, farm: Optional[FarmParams] = None) -> AnalyzeResponse:
+    """
+    Susun AnalyzeResponse dari dict hasil parsing + hitung ROI secara deterministik.
+
+    `roi_status` dari LLM diabaikan sebagai keputusan akhir (hanya dicatat di log
+    bila berbeda) — status yang dikirim ke klien selalu berasal dari
+    roi.compute_roi() sehingga bisa direproduksi dari angka-angkanya.
+    """
+    farm = farm or FarmParams()
+
+    try:
+        cost_estimate = _to_float(parsed.get("cost_estimate")) or float(
+            _FIELD_DEFAULTS["cost_estimate"]
+        )
+    except (ValueError, TypeError) as exc:
+        logger.error("Failed to read cost_estimate from parsed dict: %s", parsed)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Invalid field types in Langflow output: {exc}",
+        ) from exc
+
+    # Parameter petani menang atas estimasi LLM; LLM dipakai bila form kosong.
+    loss_percent = farm.yield_loss_percent or _to_float(
+        parsed.get("expected_yield_loss_percent")
+    )
+    effectiveness_percent = farm.effectiveness_percent or _to_float(
+        parsed.get("treatment_effectiveness_percent")
+    )
+
+    roi_result = compute_roi(
+        RoiInputs(
+            treatment_cost=cost_estimate,
+            land_area_ha=farm.land_area_ha,
+            yield_per_ha_kg=farm.yield_per_ha_kg,
+            price_per_kg=farm.price_per_kg,
+            yield_loss_ratio=loss_percent,
+            effectiveness_ratio=effectiveness_percent,
+        )
+    )
+
+    llm_opinion = str(parsed.get("roi_status", "")).strip()
+    if llm_opinion and llm_opinion.lower() != roi_result.status.lower():
+        logger.info(
+            "ROI status overridden: LLM said %r, formula computed %r (ROI %.1f%%).",
+            llm_opinion,
+            roi_result.status,
+            roi_result.roi_percent,
+        )
+
+    return AnalyzeResponse(
+        diagnosis=str(parsed.get("diagnosis", _FIELD_DEFAULTS["diagnosis"])),
+        recommended_action=str(
+            parsed.get("recommended_action", _FIELD_DEFAULTS["recommended_action"])
+        ),
+        cost_estimate=cost_estimate,
+        roi_status=roi_result.status,
+        roi=RoiBreakdown(**roi_result.as_dict()),
+    )
+
+
+def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) -> AnalyzeResponse:
     """
     Parse the Langflow HTTP response body into an AnalyzeResponse.
 
@@ -176,20 +304,8 @@ def parse_langflow_response(raw_text: str) -> AnalyzeResponse:
                 ),
             )
 
-    # 5. Build AnalyzeResponse — fill missing fields with defaults
-    try:
-        return AnalyzeResponse(
-            diagnosis=str(parsed.get("diagnosis", _FIELD_DEFAULTS["diagnosis"])),
-            recommended_action=str(parsed.get("recommended_action", _FIELD_DEFAULTS["recommended_action"])),
-            cost_estimate=float(parsed.get("cost_estimate", _FIELD_DEFAULTS["cost_estimate"])),
-            roi_status=str(parsed.get("roi_status", _FIELD_DEFAULTS["roi_status"])),
-        )
-    except (ValueError, TypeError) as exc:
-        logger.error("Failed to construct AnalyzeResponse from parsed dict: %s", parsed)
-        raise HTTPException(
-            status_code=502,
-            detail=f"Invalid field types in Langflow output: {exc}",
-        ) from exc
+    # 5. Build AnalyzeResponse — fill missing fields with defaults and compute ROI
+    return build_analyze_response(parsed, farm)
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
@@ -197,7 +313,25 @@ async def analyze(
     text: str = Form(..., min_length=1, description="Symptom description from the user"),
     image: Optional[UploadFile] = File(None, description="Optional crop photo (PNG/JPG/WEBP, max 10 MB)"),
     image_url: Optional[str] = Form(None, description="Optional public image URL (alternative to file upload)"),
+    # ── Parameter kebun untuk perhitungan ROI (opsional, ada default) ─────────
+    land_area_ha: Optional[float] = Form(None, gt=0, description="Luas lahan (ha)"),
+    yield_per_ha_kg: Optional[float] = Form(None, gt=0, description="Produktivitas (kg/ha)"),
+    price_per_kg: Optional[float] = Form(None, gt=0, description="Harga jual (Rp/kg)"),
+    yield_loss_percent: Optional[float] = Form(
+        None, gt=0, le=100, description="Perkiraan kehilangan hasil bila dibiarkan (%) — menimpa estimasi AI"
+    ),
+    effectiveness_percent: Optional[float] = Form(
+        None, gt=0, le=100, description="Efektivitas tindakan menyelamatkan hasil (%) — menimpa estimasi AI"
+    ),
 ):
+    farm = FarmParams(
+        land_area_ha=land_area_ha,
+        yield_per_ha_kg=yield_per_ha_kg,
+        price_per_kg=price_per_kg,
+        yield_loss_percent=yield_loss_percent,
+        effectiveness_percent=effectiveness_percent,
+    )
+
     # ── Validate and read image file ─────────────────────────────────────────
     image_data_uri: Optional[str] = None
 
@@ -257,4 +391,4 @@ async def analyze(
                 ),
             ) from exc
 
-    return parse_langflow_response(response.text)
+    return parse_langflow_response(response.text, farm)

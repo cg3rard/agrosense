@@ -16,7 +16,7 @@
       "post": {
         "operationId": "analyzeCrop",
         "summary": "Diagnose a crop condition and recommend action",
-        "description": "Accepts an image URL and a text description of symptoms. Returns an AI-generated diagnosis, recommended action, cost estimate in IDR, and ROI status. Call this tool whenever the user asks about plant disease, pests, fertiliser, or any agricultural treatment recommendation.",
+        "description": "Accepts an image URL and a text description of symptoms, plus optional farm parameters (land_area_ha, yield_per_ha_kg, price_per_kg, yield_loss_percent, effectiveness_percent). Returns an AI-generated diagnosis, recommended action, cost estimate in IDR, and a deterministic ROI calculation. Call this tool whenever the user asks about plant disease, pests, fertiliser, or any agricultural treatment recommendation.",
         "requestBody": {
           "required": true,
           "content": {
@@ -117,12 +117,39 @@
             "type": "string",
             "minLength": 1,
             "description": "Free-text description of symptoms, e.g. 'Daun menguning sejak 3 hari, ada bercak coklat'."
+          },
+          "land_area_ha": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Optional. Farm area in hectares (A). Defaults to 0.5 ha when omitted."
+          },
+          "yield_per_ha_kg": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Optional. Expected yield in kg per hectare (Y). Defaults to 5200 kg/ha."
+          },
+          "price_per_kg": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Optional. Selling price in IDR per kg (P). Defaults to 6500."
+          },
+          "yield_loss_percent": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "description": "Optional. Expected yield loss (%) if untreated (L). Overrides the AI estimate; defaults to 30."
+          },
+          "effectiveness_percent": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100,
+            "description": "Optional. Share of that loss the treatment can prevent (%) (E). Overrides the AI estimate; defaults to 70."
           }
         }
       },
       "AnalyzeResponse": {
         "type": "object",
-        "required": ["diagnosis", "recommended_action", "cost_estimate", "roi_status"],
+        "required": ["diagnosis", "recommended_action", "cost_estimate", "roi_status", "roi"],
         "properties": {
           "diagnosis": {
             "type": "string",
@@ -139,7 +166,93 @@
           "roi_status": {
             "type": "string",
             "enum": ["Positive", "Negative", "Neutral"],
-            "description": "Whether the recommended treatment is financially worthwhile."
+            "description": "Whether the recommended treatment is financially worthwhile. Computed from the ROI formula (roi.status), not asserted by the language model."
+          },
+          "roi": {
+            "$ref": "#/components/schemas/RoiBreakdown"
+          }
+        }
+      },
+      "RoiBreakdown": {
+        "type": "object",
+        "description": "Auditable ROI computation. Formula: R = A×Y×P; Lw = R×L; Lt = Lw×(1−E); B = Lw−Lt; N = B−C; ROI% = N/C×100; BCR = B/C. Status thresholds: ROI% >= 20 Positive, 0 < ROI% < 20 Neutral, ROI% <= 0 Negative.",
+        "required": [
+          "status",
+          "roi_percent",
+          "benefit_cost_ratio",
+          "revenue_potential",
+          "loss_if_untreated",
+          "loss_if_treated",
+          "benefit",
+          "treatment_cost",
+          "net_benefit",
+          "break_even_cost",
+          "break_even_loss_percent",
+          "land_area_ha",
+          "yield_per_ha_kg",
+          "price_per_kg",
+          "yield_loss_percent",
+          "effectiveness_percent"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["Positive", "Negative", "Neutral"],
+            "description": "Classification derived from roi_percent."
+          },
+          "roi_percent": {
+            "type": "number",
+            "description": "ROI% = (net_benefit / treatment_cost) × 100."
+          },
+          "benefit_cost_ratio": {
+            "type": "number",
+            "description": "BCR = benefit / treatment_cost."
+          },
+          "revenue_potential": {
+            "type": "number",
+            "description": "R = land_area_ha × yield_per_ha_kg × price_per_kg (IDR)."
+          },
+          "loss_if_untreated": {
+            "type": "number",
+            "description": "Lw = R × yield_loss_percent (IDR)."
+          },
+          "loss_if_treated": {
+            "type": "number",
+            "description": "Lt = Lw × (1 − effectiveness_percent) (IDR)."
+          },
+          "benefit": {
+            "type": "number",
+            "description": "B = Lw − Lt, value of the yield saved (IDR)."
+          },
+          "treatment_cost": {
+            "type": "number",
+            "description": "C, equal to cost_estimate (IDR)."
+          },
+          "net_benefit": {
+            "type": "number",
+            "description": "N = B − C (IDR)."
+          },
+          "break_even_cost": {
+            "type": "number",
+            "description": "Maximum cost at which the treatment still breaks even (IDR)."
+          },
+          "break_even_loss_percent": {
+            "type": "number",
+            "description": "L_min = C / (R × E) × 100 — minimum yield loss that justifies the cost."
+          },
+          "land_area_ha": { "type": "number", "description": "A used in the calculation." },
+          "yield_per_ha_kg": { "type": "number", "description": "Y used in the calculation." },
+          "price_per_kg": { "type": "number", "description": "P used in the calculation." },
+          "yield_loss_percent": { "type": "number", "description": "L used in the calculation (%)." },
+          "effectiveness_percent": { "type": "number", "description": "E used in the calculation (%)." },
+          "assumed_fields": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Parameters that fell back to documented defaults because they were not supplied."
+          },
+          "formula": {
+            "type": "string",
+            "description": "Summary of the formula applied."
           }
         }
       },

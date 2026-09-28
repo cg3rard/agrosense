@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import type { DiagnosisHistory } from "@/types";
+import type { DiagnosisHistory, RoiBreakdown } from "@/types";
 import { useAgroSense } from "../context/agrosense";
 
 /* ── Icons ────────────────────────────────────────────────────────────────── */
@@ -157,8 +157,24 @@ function IconTrash() {
     </svg>
   );
 }
-function IconArrowRight() {
+function IconCalculator() {
   return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      className="w-5 h-5 text-[var(--brand)]"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008ZM8.25 15h.008v.008H8.25V15Zm0 2.25h.008v.008H8.25v-.008ZM11.25 15h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008ZM14.25 15h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15ZM6 6.75h12A1.5 1.5 0 0 1 19.5 8.25v10.5A2.25 2.25 0 0 1 17.25 21H6.75A2.25 2.25 0 0 1 4.5 18.75V8.25A1.5 1.5 0 0 1 6 6.75Zm1.5 0V4.5A1.5 1.5 0 0 1 9 3h6a1.5 1.5 0 0 1 1.5 1.5v2.25m-9 2.25h9v2.25h-9V9Z"
+      />
+    </svg>
+  );
+}
+function IconArrowRight() {  return (
     <svg
       viewBox="0 0 24 24"
       fill="none"
@@ -178,13 +194,15 @@ function IconArrowRight() {
 /* ── ROI status normalisation ────────────────────────────────────────────── */
 type RoiKind = "Positive" | "Negative" | "Neutral";
 
-/** Backend/LLM may return varying casings or synonyms — normalise to a known kind. */
+/** Backend/LLM may return varying casings or synonyms — normalise to a known kind.
+ *  Negasi ("tidak menguntungkan", "kurang baik") diperiksa lebih dulu agar tidak
+ *  salah tertangkap oleh kata dasarnya. */
 function normalizeRoiStatus(raw: string): RoiKind {
   const v = raw.trim().toLowerCase();
+  const negated = /\b(tidak|kurang|belum|non|not)\b/.test(v);
+  if (v.includes("negative") || v.includes("rugi") || v.includes("buruk")) return "Negative";
   if (v.includes("positive") || v.includes("untung") || v.includes("baik"))
-    return "Positive";
-  if (v.includes("negative") || v.includes("rugi") || v.includes("buruk"))
-    return "Negative";
+    return negated ? "Negative" : "Positive";
   return "Neutral";
 }
 
@@ -276,6 +294,239 @@ function MetricBlock({
           {label}
         </p>
         {children}
+      </div>
+    </div>
+  );
+}
+
+/* ── Rincian perhitungan ROI ──────────────────────────────────────────────── */
+const rp = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+const num = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
+
+const ASSUMED_LABEL: Record<string, string> = {
+  land_area_ha: "luas lahan",
+  yield_per_ha_kg: "produktivitas",
+  price_per_kg: "harga jual",
+  yield_loss_ratio: "perkiraan kehilangan hasil",
+  effectiveness_ratio: "efektivitas tindakan",
+};
+
+function FormulaRow({
+  label,
+  formula,
+  detail,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  formula: string;
+  detail?: string;
+  value: string;
+  tone?: "default" | "cost" | "benefit" | "total";
+}) {
+  const valueTone =
+    tone === "cost"
+      ? "text-red-600"
+      : tone === "benefit"
+        ? "text-emerald-700"
+        : "text-gray-900";
+  return (
+    <div
+      className={`flex items-start justify-between gap-4 px-5 sm:px-6 py-3.5 ${
+        tone === "total" ? "bg-gray-50/70" : ""
+      }`}
+    >
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <p
+            className={`text-sm ${tone === "total" ? "font-semibold text-gray-900" : "text-[var(--fg-secondary)]"}`}
+          >
+            {label}
+          </p>
+          <code className="text-[11px] font-mono text-[var(--fg-tertiary)] bg-gray-100 rounded px-1.5 py-0.5">
+            {formula}
+          </code>
+        </div>
+        {detail && (
+          <p className="text-[11px] text-[var(--fg-tertiary)] mt-1 tabular-nums">
+            {detail}
+          </p>
+        )}
+      </div>
+      <p
+        className={`text-sm font-semibold tabular-nums shrink-0 ${tone === "total" ? "text-base" : ""} ${valueTone}`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
+  const kind = normalizeRoiStatus(roi.status);
+  const meta = ROI_META[kind];
+  const assumed = roi.assumed_fields
+    .map((f) => ASSUMED_LABEL[f] ?? f)
+    .filter(Boolean);
+
+  return (
+    <div
+      className="bg-white rounded-3xl border border-gray-100 shadow-[var(--shadow-card)] overflow-hidden animate-fade-up"
+      style={{ animationDelay: "90ms" }}
+    >
+      {/* header */}
+      <div className="px-5 sm:px-8 py-6 border-b border-gray-100/70 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="icon-tile w-9 h-9 shrink-0">
+            <IconCalculator />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 tracking-tight">
+              Rincian Perhitungan ROI
+            </h2>
+            <p className="text-xs text-[var(--fg-tertiary)] mt-0.5 leading-relaxed max-w-md">
+              Dihitung dari rumus di server, bukan dari opini AI — setiap angka di
+              bawah bisa Anda periksa ulang.
+            </p>
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p
+            className={`text-2xl font-bold tabular-nums tracking-tight ${meta.text}`}
+          >
+            {roi.roi_percent > 0 ? "+" : ""}
+            {num(roi.roi_percent)}%
+          </p>
+          <p className="text-[11px] text-[var(--fg-tertiary)]">
+            BCR {num(roi.benefit_cost_ratio)}×
+          </p>
+        </div>
+      </div>
+
+      {/* parameter yang dipakai */}
+      <div className="px-5 sm:px-8 py-4 border-b border-gray-100/70 bg-gray-50/40 grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {[
+          { label: "Luas lahan (A)", value: `${num(roi.land_area_ha)} ha` },
+          {
+            label: "Produktivitas (Y)",
+            value: `${num(roi.yield_per_ha_kg)} kg/ha`,
+          },
+          { label: "Harga jual (P)", value: `${rp(roi.price_per_kg)}/kg` },
+          {
+            label: "Kehilangan hasil (L)",
+            value: `${num(roi.yield_loss_percent)}%`,
+          },
+          {
+            label: "Efektivitas (E)",
+            value: `${num(roi.effectiveness_percent)}%`,
+          },
+        ].map(({ label, value }) => (
+          <div key={label}>
+            <p className="text-[10px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-wider">
+              {label}
+            </p>
+            <p className="text-xs font-semibold text-gray-900 tabular-nums mt-0.5">
+              {value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* langkah perhitungan */}
+      <div className="divide-y divide-gray-100/80">
+        <FormulaRow
+          label="Potensi pendapatan"
+          formula="R = A × Y × P"
+          detail={`${num(roi.land_area_ha)} ha × ${num(roi.yield_per_ha_kg)} kg/ha × ${rp(roi.price_per_kg)}/kg`}
+          value={rp(roi.revenue_potential)}
+        />
+        <FormulaRow
+          label="Kerugian bila dibiarkan"
+          formula="Lw = R × L"
+          detail={`${rp(roi.revenue_potential)} × ${num(roi.yield_loss_percent)}%`}
+          value={rp(roi.loss_if_untreated)}
+        />
+        <FormulaRow
+          label="Kerugian setelah ditangani"
+          formula="Lt = Lw × (1 − E)"
+          detail={`${rp(roi.loss_if_untreated)} × ${num(100 - roi.effectiveness_percent)}%`}
+          value={rp(roi.loss_if_treated)}
+        />
+        <FormulaRow
+          label="Hasil yang terselamatkan"
+          formula="B = Lw − Lt"
+          detail={`${rp(roi.loss_if_untreated)} − ${rp(roi.loss_if_treated)}`}
+          value={rp(roi.benefit)}
+          tone="benefit"
+        />
+        <FormulaRow
+          label="Biaya tindakan"
+          formula="C"
+          value={`− ${rp(roi.treatment_cost)}`}
+          tone="cost"
+        />
+        <FormulaRow
+          label="Manfaat bersih"
+          formula="N = B − C"
+          detail={`${rp(roi.benefit)} − ${rp(roi.treatment_cost)}`}
+          value={rp(roi.net_benefit)}
+          tone="total"
+        />
+        <FormulaRow
+          label="Return on Investment"
+          formula="ROI% = N ÷ C × 100"
+          detail={
+            roi.treatment_cost > 0
+              ? `${rp(roi.net_benefit)} ÷ ${rp(roi.treatment_cost)} × 100`
+              : "Biaya nol — ROI tidak terdefinisi"
+          }
+          value={`${roi.roi_percent > 0 ? "+" : ""}${num(roi.roi_percent)}%`}
+          tone="total"
+        />
+      </div>
+
+      {/* break-even + ambang klasifikasi */}
+      <div className="px-5 sm:px-8 py-5 border-t border-gray-100/70 grid sm:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3">
+          <p className="text-[10px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-wider">
+            Batas biaya (break-even)
+          </p>
+          <p className="text-sm font-semibold text-gray-900 tabular-nums mt-1">
+            {rp(roi.break_even_cost)}
+          </p>
+          <p className="text-[11px] text-[var(--fg-tertiary)] mt-1 leading-relaxed">
+            Tindakan masih layak selama total biaya tidak melebihi angka ini.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3">
+          <p className="text-[10px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-wider">
+            Kehilangan hasil minimum
+          </p>
+          <p className="text-sm font-semibold text-gray-900 tabular-nums mt-1">
+            {num(roi.break_even_loss_percent)}%
+          </p>
+          <p className="text-[11px] text-[var(--fg-tertiary)] mt-1 leading-relaxed">
+            L_min = C ÷ (R × E) — di bawah angka ini, biaya tindakan tidak
+            terbayar.
+          </p>
+        </div>
+      </div>
+
+      {/* catatan asumsi */}
+      <div className="px-5 sm:px-8 py-4 border-t border-gray-100/70 bg-gray-50/40 space-y-2">
+        <p className="text-[11px] text-[var(--fg-tertiary)] leading-relaxed">
+          Ambang status: ROI ≥ +20% <span className="font-medium">Menguntungkan</span>,
+          0–20% <span className="font-medium">Netral</span>, ≤ 0%{" "}
+          <span className="font-medium">Tidak Menguntungkan</span>. Margin 20%
+          dipakai karena seluruh input masih berupa estimasi.
+        </p>
+        {assumed.length > 0 && (
+          <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 leading-relaxed">
+            Memakai asumsi default untuk: {assumed.join(", ")}. Isi{" "}
+            <span className="font-semibold">Parameter Kebun</span> di halaman
+            diagnosis agar hasilnya sesuai kebun Anda.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -730,6 +981,16 @@ function ResultInner() {
                         Status ROI
                       </p>
                       <RoiBadge status={latestResult.roi_status} large />
+                      {latestResult.roi && (
+                        <p className="text-sm font-semibold text-gray-900 tabular-nums mt-2">
+                          ROI {latestResult.roi.roi_percent > 0 ? "+" : ""}
+                          {num(latestResult.roi.roi_percent)}%
+                          <span className="text-xs font-normal text-[var(--fg-tertiary)]">
+                            {" "}
+                            · manfaat bersih {rp(latestResult.roi.net_benefit)}
+                          </span>
+                        </p>
+                      )}
                       <p className="text-xs text-[var(--fg-secondary)] mt-2 leading-relaxed">
                         {roiMeta.desc}
                       </p>
@@ -739,6 +1000,22 @@ function ResultInner() {
               </div>
             </div>
           </div>
+
+          {/* ══ RINCIAN PERHITUNGAN ROI ═════════════════════════════════ */}
+          {latestResult.roi ? (
+            <RoiCalculationCard roi={latestResult.roi} />
+          ) : (
+            <div
+              className="rounded-3xl border border-gray-100 bg-white px-5 sm:px-8 py-5 shadow-[var(--shadow-card)] animate-fade-up"
+              style={{ animationDelay: "90ms" }}
+            >
+              <p className="text-xs text-[var(--fg-tertiary)] leading-relaxed">
+                Hasil ini tersimpan sebelum kalkulator ROI aktif, sehingga rincian
+                rumusnya tidak tersedia. Jalankan diagnosis ulang untuk melihat
+                perhitungan lengkapnya.
+              </p>
+            </div>
+          )}
 
           {/* ══ RIWAYAT HASIL SEBELUMNYA ═══════════════════════════════ */}
           {historySection}

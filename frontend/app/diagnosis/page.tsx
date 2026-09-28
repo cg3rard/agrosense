@@ -1,10 +1,61 @@
 'use client';
 
-import { useState, useRef, useCallback, DragEvent } from 'react';
+import { useState, useRef, useCallback, useSyncExternalStore, DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAgroSense } from '../context/agrosense';
-import type { AnalyzeResponse, DiagnosisHistory } from '@/types';
+import type { AnalyzeResponse, DiagnosisHistory, FarmParams } from '@/types';
+
+/* ── Parameter kebun ──────────────────────────────────────────────────────────
+   localStorage dipakai sebagai sumber data (agar tidak perlu diisi ulang setiap
+   diagnosis) dan dibaca lewat useSyncExternalStore supaya aman terhadap SSR
+   tanpa setState di dalam effect. */
+const FARM_KEY = 'agrosense_farm_params';
+const EMPTY_FARM: FarmParams = { land_area_ha: '', yield_per_ha_kg: '', price_per_kg: '' };
+
+/** Nilai asumsi default backend (backend/roi.py) — dipakai sebagai placeholder. */
+const FARM_DEFAULTS: Record<keyof FarmParams, string> = {
+  land_area_ha: '0.5',
+  yield_per_ha_kg: '5200',
+  price_per_kg: '6500',
+};
+
+const farmListeners = new Set<() => void>();
+
+function readFarmRaw(): string {
+  try {
+    return localStorage.getItem(FARM_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function subscribeFarm(onChange: () => void): () => void {
+  farmListeners.add(onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    farmListeners.delete(onChange);
+    window.removeEventListener('storage', onChange);
+  };
+}
+
+function parseFarm(raw: string): FarmParams {
+  if (!raw) return EMPTY_FARM;
+  try {
+    return { ...EMPTY_FARM, ...(JSON.parse(raw) as Partial<FarmParams>) };
+  } catch {
+    return EMPTY_FARM;
+  }
+}
+
+function writeFarm(next: FarmParams): void {
+  try {
+    localStorage.setItem(FARM_KEY, JSON.stringify(next));
+  } catch {
+    // storage penuh / diblokir — tidak fatal
+  }
+  farmListeners.forEach(notify => notify());
+}
 
 /* ── icons ───────────────────────────────────────────────────────────────── */
 function IconUpload({ dragging }: { dragging: boolean }) {
@@ -63,9 +114,14 @@ function RoiBadge({ status }: { status: string }) {
     Negative: 'bg-red-50 text-red-600 ring-1 ring-red-200',
     Neutral:  'bg-gray-100 text-gray-500 ring-1 ring-gray-200',
   };
+  const label: Record<string, string> = {
+    Positive: 'Menguntungkan',
+    Negative: 'Tidak Menguntungkan',
+    Neutral:  'Netral',
+  };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${map[status] ?? map.Neutral}`}>
-      {status}
+      {label[status] ?? status}
     </span>
   );
 }
@@ -149,6 +205,19 @@ function DiagnosisInner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraRef    = useRef<HTMLInputElement>(null);
 
+  /* parameter kebun dibaca dari localStorage (kosong saat SSR) */
+  const farmRaw = useSyncExternalStore(subscribeFarm, readFarmRaw, () => '');
+  const farm    = parseFarm(farmRaw);
+  const hasFarmValue = Boolean(farm.land_area_ha || farm.yield_per_ha_kg || farm.price_per_kg);
+
+  /* null = ikuti isi tersimpan; true/false = dibuka/ditutup manual oleh user */
+  const [farmPanelOpen, setFarmPanelOpen] = useState<boolean | null>(null);
+  const showFarm = farmPanelOpen ?? hasFarmValue;
+
+  const updateFarm = useCallback((key: keyof FarmParams, value: string) => {
+    writeFarm({ ...parseFarm(readFarmRaw()), [key]: value });
+  }, []);
+
   /* drag-and-drop */
   const onDragOver  = useCallback((e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); }, []);
   const onDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -189,6 +258,15 @@ function DiagnosisInner() {
       fd.append('text', textInput || ' ');
       if (imageFile)     fd.append('image', imageFile);
       else if (imageUrl) fd.append('image_url', imageUrl);
+
+      /* parameter kebun — hanya dikirim bila diisi dan valid (> 0);
+         bila kosong backend memakai asumsi default yang terdokumentasi */
+      (Object.keys(EMPTY_FARM) as (keyof FarmParams)[]).forEach(key => {
+        const num = Number(farm[key].replace(',', '.'));
+        if (farm[key].trim() !== '' && Number.isFinite(num) && num > 0) {
+          fd.append(key, String(num));
+        }
+      });
 
       const res = await fetch('/api/analyze', { method: 'POST', body: fd });
       if (!res.ok) {
@@ -378,6 +456,57 @@ function DiagnosisInner() {
                 </div>
               </div>
 
+              {/* ── Parameter kebun (input rumus ROI) ── */}
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setFarmPanelOpen(!showFarm)}
+                  className="w-full flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50/60 px-4 py-3 text-left hover:border-emerald-300 transition-colors duration-200"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                      Parameter Kebun (opsional)
+                    </span>
+                    <span className="block text-xs text-[var(--fg-tertiary)] mt-0.5">
+                      Dipakai untuk menghitung ROI. Kosongkan untuk memakai asumsi padi 0,5 ha.
+                    </span>
+                  </span>
+                  <svg
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+                    className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-300 ${showFarm ? 'rotate-180' : ''}`}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </button>
+
+                {showFarm && (
+                  <div className="grid sm:grid-cols-3 gap-3 animate-fade-in">
+                    {([
+                      { key: 'land_area_ha',    label: 'Luas lahan',     unit: 'ha',    step: '0.01' },
+                      { key: 'yield_per_ha_kg', label: 'Produktivitas',  unit: 'kg/ha', step: '10'   },
+                      { key: 'price_per_kg',    label: 'Harga jual',     unit: 'Rp/kg', step: '100'  },
+                    ] as const).map(({ key, label, unit, step }) => (
+                      <div key={key} className="space-y-1.5">
+                        <label htmlFor={key} className="block text-[11px] font-medium text-gray-500">
+                          {label} <span className="text-[var(--fg-tertiary)]">({unit})</span>
+                        </label>
+                        <input
+                          id={key}
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          step={step}
+                          value={farm[key]}
+                          onChange={e => updateFarm(key, e.target.value)}
+                          placeholder={FARM_DEFAULTS[key]}
+                          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 tabular-nums placeholder-[var(--fg-tertiary)] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* ── submit ── */}
               <button
                 type="submit"
@@ -439,7 +568,15 @@ function DiagnosisInner() {
                           Rp {pendingResult.cost_estimate.toLocaleString('id-ID')}
                         </p>
                       </div>
-                      <RoiBadge status={pendingResult.roi_status} />
+                      <div className="flex flex-col items-end gap-1">
+                        <RoiBadge status={pendingResult.roi_status} />
+                        {pendingResult.roi && (
+                          <span className="text-[11px] text-[var(--fg-tertiary)] tabular-nums">
+                            ROI {pendingResult.roi.roi_percent > 0 ? '+' : ''}
+                            {pendingResult.roi.roi_percent.toLocaleString('id-ID')}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
