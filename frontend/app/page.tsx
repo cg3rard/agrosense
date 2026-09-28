@@ -273,18 +273,14 @@ export default function LandingPage() {
                 }}
               />
               <StatCard
-                value="3 hari*"
+                value="2-3 hari"
                 label="Estimasi rata-rata waktu tunggu konsultasi penyuluh konvensional"
-                source={{ name: "Estimasi ilustratif internal" }}
+                source={{
+                  name: "Jangka Waktu Penyelesaian",
+                  href: "https://dinpertanpangan.demakkab.go.id/?page_id=688",
+                }}
               />
             </Reveal>
-            <p className="text-xs text-[var(--fg-tertiary)] mb-16 leading-relaxed">
-              *Angka tanpa tautan sumber adalah estimasi ilustratif internal
-              AgroSense berdasarkan observasi lapangan informal, belum
-              diverifikasi oleh lembaga resmi. Data lain bersumber dari
-              publikasi FAO (Food and Agriculture Organization) yang tertaut di
-              atas.
-            </p>
 
             <div className="grid sm:grid-cols-3 gap-5">
               {[
@@ -467,7 +463,13 @@ export default function LandingPage() {
           {/* brand */}
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg overflow-hidden shrink-0">
-              <Image src="/favicon.jpg" alt="AgroSense" width={24} height={24} className="w-full h-full object-cover" />
+              <Image
+                src="/favicon.jpg"
+                alt="AgroSense"
+                width={24}
+                height={24}
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-xs font-semibold text-gray-700 tracking-tight">
               AgroSense
