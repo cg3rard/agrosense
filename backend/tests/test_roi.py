@@ -45,9 +45,9 @@ def test_rumus_dasar_dengan_angka_bulat():
     assert r.roi_percent == 400.0
     assert r.benefit_cost_ratio == 5.0
     assert r.status == "Positive"
-    # Biaya maksimum agar masih break-even = manfaat
+
     assert r.break_even_cost == 5_000_000
-    # L_min = C / (R × E) = 1.000.000 / 12.500.000 = 8%
+
     assert r.break_even_loss_percent == 8.0
     assert r.assumed_fields == []
 
@@ -73,7 +73,7 @@ def test_biaya_melebihi_manfaat_menghasilkan_negative():
 
 def test_roi_tipis_dianggap_neutral():
     """ROI +10% berada di bawah ambang +20% -> Neutral, bukan Positive."""
-    # B = 1.100.000 dari R=11.000.000 (1 ha × 2200 kg × Rp5.000), L=20%, E=50%
+
     r = compute_roi(
         RoiInputs(
             treatment_cost=1_000_000,
@@ -134,7 +134,7 @@ def test_rasio_di_atas_seratus_persen_dipangkas():
 
     assert r.yield_loss_percent == 100.0
     assert r.effectiveness_percent == 100.0
-    # Seluruh potensi pendapatan hilang dan seluruhnya terselamatkan
+
     assert r.benefit == r.revenue_potential
     assert r.loss_if_treated == 0
 
@@ -144,7 +144,7 @@ def test_biaya_nol_tidak_membagi_dengan_nol():
 
     assert r.roi_percent == 0.0
     assert r.benefit_cost_ratio == 0.0
-    assert r.status == "Positive"  # ada manfaat, tanpa biaya
+    assert r.status == "Positive"
 
 
 def test_biaya_recehan_tidak_menghasilkan_roi_ekstrem():
@@ -160,7 +160,7 @@ def test_biaya_recehan_tidak_menghasilkan_roi_ekstrem():
     assert r.roi_percent == 0.0
     assert r.benefit_cost_ratio == 0.0
     assert "treatment_cost" in r.assumed_fields
-    # ROI harus tetap masuk akal, jauh di bawah ambang bug (700.199.900%)
+
     assert r.roi_percent < 1000.0
 
 

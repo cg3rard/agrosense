@@ -15,12 +15,12 @@ from config import settings
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Maximum file size accepted: 10 MB
+
 _MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
-# Fields we try to read from the LLM output.
-# `roi_status` is still accepted but only kept as the model's *opinion* — the
-# authoritative status is computed by roi.compute_roi().
+
+
+
 _REQUIRED_FIELDS = ("diagnosis", "recommended_action", "cost_estimate", "roi_status")
 _NUMERIC_HINT_FIELDS = ("expected_yield_loss_percent", "treatment_effectiveness_percent")
 _FIELD_DEFAULTS: dict[str, str | float] = {
@@ -55,7 +55,7 @@ def _to_float(value: object) -> Optional[float]:
         return float(value)
 
     text = str(value).strip()
-    # Buang simbol mata uang, satuan, dan spasi
+
     text = re.sub(r"(?i)(rp|idr|%|/kg|per\s*kg|kg|ha)", "", text).strip()
     text = text.replace(" ", "")
     if not re.search(r"\d", text):
@@ -63,12 +63,12 @@ def _to_float(value: object) -> Optional[float]:
 
     has_dot, has_comma = "." in text, "," in text
     if has_dot and has_comma:
-        # Format id-ID: titik ribuan, koma desimal
+
         text = text.replace(".", "").replace(",", ".")
     elif has_comma:
         text = text.replace(",", "") if re.fullmatch(r"\d{1,3}(,\d{3})+", text) else text.replace(",", ".")
     elif has_dot:
-        # "150.000" = ribuan, "1.5" = desimal
+
         if re.fullmatch(r"\d{1,3}(\.\d{3})+", text):
             text = text.replace(".", "")
 
@@ -81,7 +81,7 @@ def _image_to_data_uri(content: bytes, mime: str) -> str:
     return f"data:{mime};base64,{base64.b64encode(content).decode()}"
 
 
-# Diminta ke LLM sebagai tambahan — dipakai sebagai input rumus ROI.
+
 _EXTRA_FIELD_INSTRUCTION = (
     "Sertakan juga dua angka ini pada output (angka saja, tanpa satuan): "
     "expected_yield_loss_percent = perkiraan persentase kehilangan hasil panen "
@@ -140,7 +140,7 @@ def _fallback_parse(text: str) -> Optional[dict]:
     recognisable pattern is found.
     """
     result: dict[str, str] = {}
-    # Match lines like "key: value" or "**key**: value" (case-insensitive)
+
     pattern = re.compile(
         r"^\s*\**(?P<key>diagnosis|recommended_action|cost_estimate|roi_status"
         r"|expected_yield_loss_percent|treatment_effectiveness_percent)\**\s*[:\-]\s*(?P<value>.+)$",
@@ -152,7 +152,7 @@ def _fallback_parse(text: str) -> Optional[dict]:
     if not result:
         return None
 
-    # Fill in any missing fields with sensible defaults
+
     for field, default in _FIELD_DEFAULTS.items():
         result.setdefault(field, str(default))
 
@@ -190,7 +190,7 @@ def build_analyze_response(parsed: dict, farm: Optional[FarmParams] = None) -> A
             detail=f"Invalid field types in Langflow output: {exc}",
         ) from exc
 
-    # Parameter petani menang atas estimasi LLM; LLM dipakai bila form kosong.
+
     loss_percent = farm.yield_loss_percent or _to_float(
         parsed.get("expected_yield_loss_percent")
     )
@@ -240,7 +240,7 @@ def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) ->
     4. If that fails, run _fallback_parse() on the inner text (plain-text path).
     5. If both fail, raise 502 with enough context to diagnose the issue.
     """
-    # 1. Guard empty body
+
     if not raw_text or not raw_text.strip():
         logger.error("Langflow returned an empty response body.")
         raise HTTPException(
@@ -252,7 +252,7 @@ def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) ->
             ),
         )
 
-    # 2. Parse outer Langflow envelope
+
     try:
         data = json.loads(raw_text)
     except json.JSONDecodeError as exc:
@@ -262,7 +262,7 @@ def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) ->
             detail=f"Langflow returned non-JSON HTTP response: {raw_text[:200]}",
         ) from exc
 
-    # Extract the inner output text
+
     try:
         output_text: str = _extract_output_text(data)
     except (KeyError, IndexError, TypeError) as exc:
@@ -275,7 +275,7 @@ def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) ->
             ),
         ) from exc
 
-    # 3. Try strict JSON parse of inner text
+
     parsed: Optional[dict] = None
     try:
         parsed = json.loads(output_text)
@@ -286,7 +286,7 @@ def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) ->
             output_text[:300],
         )
 
-    # 4. Fallback: parse plain-text key-value lines
+
     if parsed is None:
         parsed = _fallback_parse(output_text)
         if parsed is not None:
@@ -304,7 +304,7 @@ def parse_langflow_response(raw_text: str, farm: Optional[FarmParams] = None) ->
                 ),
             )
 
-    # 5. Build AnalyzeResponse — fill missing fields with defaults and compute ROI
+
     return build_analyze_response(parsed, farm)
 
 
@@ -313,7 +313,7 @@ async def analyze(
     text: str = Form(..., min_length=1, description="Symptom description from the user"),
     image: Optional[UploadFile] = File(None, description="Optional crop photo (PNG/JPG/WEBP, max 10 MB)"),
     image_url: Optional[str] = Form(None, description="Optional public image URL (alternative to file upload)"),
-    # ── Parameter kebun untuk perhitungan ROI (opsional, ada default) ─────────
+
     land_area_ha: Optional[float] = Form(None, gt=0, description="Luas lahan (ha)"),
     yield_per_ha_kg: Optional[float] = Form(None, gt=0, description="Produktivitas (kg/ha)"),
     price_per_kg: Optional[float] = Form(None, gt=0, description="Harga jual (Rp/kg)"),
@@ -332,7 +332,7 @@ async def analyze(
         effectiveness_percent=effectiveness_percent,
     )
 
-    # ── Validate and read image file ─────────────────────────────────────────
+
     image_data_uri: Optional[str] = None
 
     if image and image.filename:
@@ -348,11 +348,11 @@ async def analyze(
         logger.info("Image received: %s (%d bytes, %s)", image.filename, len(content), mime)
 
     elif image_url:
-        # Caller provided a public URL — pass it as a markdown image reference
+
         image_data_uri = f"[IMAGE_URL]{image_url}[/IMAGE_URL]"
         logger.info("Image URL received: %s", image_url)
 
-    # ── Build and send Langflow payload ──────────────────────────────────────
+
     payload = build_langflow_payload(text, image_data_uri)
 
     headers: dict[str, str] = {"Content-Type": "application/json"}

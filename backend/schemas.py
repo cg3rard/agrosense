@@ -23,7 +23,7 @@ class RoiBreakdown(BaseModel):
     roi_percent: float = Field(..., description="(manfaat bersih / biaya) × 100")
     benefit_cost_ratio: float = Field(..., description="manfaat / biaya (BCR)")
 
-    # Komponen rumus (semua dalam Rupiah)
+
     revenue_potential: float = Field(..., description="R = luas × produktivitas × harga")
     loss_if_untreated: float = Field(..., description="Lw = R × fraksi kehilangan hasil")
     loss_if_treated: float = Field(..., description="Lt = Lw × (1 − efektivitas)")
@@ -35,7 +35,7 @@ class RoiBreakdown(BaseModel):
         ..., description="Kehilangan hasil minimum (%) yang membenarkan biaya tersebut"
     )
 
-    # Input yang dipakai (echo, untuk transparansi)
+
     land_area_ha: float
     yield_per_ha_kg: float
     price_per_kg: float

@@ -1,15 +1,15 @@
-﻿# ═══════════════════════════════════════════════════════════════════════════════
-# AgroSense — root .gitignore
-# Covers: Python (FastAPI), Node/Next.js, Docker, editors, and OS artefacts.
-# ═══════════════════════════════════════════════════════════════════════════════
 
-# ── Environment & secrets ────────────────────────────────────────────────────
+
+
+
+
+
 .env
 .env.*
 !.env.example
 !.env.*.example
 
-# ── Python ───────────────────────────────────────────────────────────────────
+
 __pycache__/
 *.py[cod]
 *$py.class
@@ -17,7 +17,7 @@ __pycache__/
 *.pyd
 *.so
 
-# Distribution / packaging
+
 dist/
 build/
 *.egg-info/
@@ -25,14 +25,14 @@ build/
 .eggs/
 MANIFEST
 
-# Virtual environments
+
 .venv/
 venv/
 env/
 ENV/
 .python-version
 
-# Testing & coverage
+
 .pytest_cache/
 .coverage
 .coverage.*
@@ -41,14 +41,14 @@ coverage.xml
 *.coveragerc
 nosetests.xml
 
-# Type checkers & linters
+
 .mypy_cache/
 .dmypy.json
 dmypy.json
 .ruff_cache/
 .pytype/
 
-# ── Node / Next.js ───────────────────────────────────────────────────────────
+
 node_modules/
 .pnp
 .pnp.*
@@ -58,69 +58,69 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Next.js build output
+
 .next/
 out/
 
-# Production build (CRA / plain Node)
+
 build/
 
-# Parcel / Turbo / other bundlers
+
 .parcel-cache/
 .turbo/
 
-# Testing
+
 coverage/
 
-# Debug logs
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 lerna-debug.log*
 
-# TypeScript
+
 *.tsbuildinfo
 next-env.d.ts
 
-# Vercel
+
 .vercel/
 
-# ── Docker ───────────────────────────────────────────────────────────────────
-# Don't ignore docker-compose.yml or Dockerfiles themselves — they're source.
-# Ignore any local override files.
+
+
+
 docker-compose.override.yml
 docker-compose.local.yml
 
-# ── Editors & IDEs ───────────────────────────────────────────────────────────
-# VS Code
+
+
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 !.vscode/launch.json
 
-# JetBrains (PyCharm, WebStorm, …)
+
 .idea/
 *.iml
 *.iws
 
-# Vim / Neovim
+
 *.swp
 *.swo
 *~
 Session.vim
 .netrwhist
 
-# Emacs
+
 \#*\#
 .\#*
 
-# Sublime Text
+
 *.sublime-project
 *.sublime-workspace
 
-# ── OS artefacts ─────────────────────────────────────────────────────────────
-# macOS
+
+
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -128,27 +128,27 @@ Session.vim
 .Spotlight-V100
 .Trashes
 
-# Windows
+
 Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# Linux
+
 .fuse_hidden*
 .directory
 .Trash-*
 .nfs*
 
-# ── Certificates & keys ──────────────────────────────────────────────────────
+
 *.pem
 *.key
 *.crt
 *.p12
 *.pfx
 
-# ── Misc ─────────────────────────────────────────────────────────────────────
+
 *.log
 *.bak
 *.orig

@@ -6,14 +6,14 @@ import Image from 'next/image';
 import { useAgroSense } from '../context/agrosense';
 import type { AnalyzeResponse, DiagnosisHistory, FarmParams } from '@/types';
 
-/* ── Parameter kebun ──────────────────────────────────────────────────────────
-   localStorage dipakai sebagai sumber data (agar tidak perlu diisi ulang setiap
-   diagnosis) dan dibaca lewat useSyncExternalStore supaya aman terhadap SSR
-   tanpa setState di dalam effect. */
+
+
+
+
 const FARM_KEY = 'agrosense_farm_params';
 const EMPTY_FARM: FarmParams = { land_area_ha: '', yield_per_ha_kg: '', price_per_kg: '' };
 
-/** Nilai asumsi default backend (backend/roi.py) — dipakai sebagai placeholder. */
+
 const FARM_DEFAULTS: Record<keyof FarmParams, string> = {
   land_area_ha: '0.5',
   yield_per_ha_kg: '5200',
@@ -52,12 +52,12 @@ function writeFarm(next: FarmParams): void {
   try {
     localStorage.setItem(FARM_KEY, JSON.stringify(next));
   } catch {
-    // storage penuh / diblokir — tidak fatal
+
   }
   farmListeners.forEach(notify => notify());
 }
 
-/* ── icons ───────────────────────────────────────────────────────────────── */
+
 function IconUpload({ dragging }: { dragging: boolean }) {
   return dragging ? (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-7 h-7 text-emerald-600">
@@ -107,7 +107,7 @@ function Spinner() {
   );
 }
 
-/* ── ROI badge ───────────────────────────────────────────────────────────── */
+
 function RoiBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     Positive: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
@@ -126,7 +126,7 @@ function RoiBadge({ status }: { status: string }) {
   );
 }
 
-/* ── result skeleton ─────────────────────────────────────────────────────── */
+
 function Skel({ className = '' }: { className?: string }) {
   return <div className={`rounded-xl bg-gray-100 animate-skeleton ${className}`} />;
 }
@@ -149,7 +149,7 @@ function ResultSkeleton() {
   );
 }
 
-/* ── history row ─────────────────────────────────────────────────────────── */
+
 function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: DiagnosisHistory) => void }) {
   return (
     <button
@@ -157,7 +157,7 @@ function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: Di
       className="w-full text-left flex items-center gap-4 px-5 py-4 hover:bg-gray-50/80 transition-all duration-300 group"
       style={{ transitionTimingFunction: 'var(--ease-out)' }}
     >
-      {/* thumbnail or fallback */}
+
       <div className="icon-tile w-10 h-10 shrink-0 overflow-hidden group-hover:scale-105">
         {entry.imageName ? (
           <span className="text-[10px] font-bold text-[var(--brand)] uppercase">{entry.imageName.slice(0, 3)}</span>
@@ -168,7 +168,7 @@ function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: Di
         )}
       </div>
 
-      {/* info */}
+
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 truncate">{entry.result.diagnosis}</p>
         <p className="text-xs text-[var(--fg-tertiary)] truncate mt-0.5">
@@ -176,7 +176,7 @@ function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: Di
         </p>
       </div>
 
-      {/* meta */}
+
       <div className="flex flex-col items-end gap-1 shrink-0">
         <RoiBadge status={entry.result.roi_status} />
         <span className="text-[10px] text-gray-300">
@@ -189,7 +189,7 @@ function HistoryRow({ entry, onView }: { entry: DiagnosisHistory; onView: (e: Di
   );
 }
 
-/* ── main inner component ────────────────────────────────────────────────── */
+
 function DiagnosisInner() {
   const router = useRouter();
   const { setLatestResult, history, addHistory, clearHistory, historyHydrated } = useAgroSense();
@@ -205,12 +205,12 @@ function DiagnosisInner() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraRef    = useRef<HTMLInputElement>(null);
 
-  /* parameter kebun dibaca dari localStorage (kosong saat SSR) */
+
   const farmRaw = useSyncExternalStore(subscribeFarm, readFarmRaw, () => '');
   const farm    = parseFarm(farmRaw);
   const hasFarmValue = Boolean(farm.land_area_ha || farm.yield_per_ha_kg || farm.price_per_kg);
 
-  /* null = ikuti isi tersimpan; true/false = dibuka/ditutup manual oleh user */
+
   const [farmPanelOpen, setFarmPanelOpen] = useState<boolean | null>(null);
   const showFarm = farmPanelOpen ?? hasFarmValue;
 
@@ -218,7 +218,7 @@ function DiagnosisInner() {
     writeFarm({ ...parseFarm(readFarmRaw()), [key]: value });
   }, []);
 
-  /* drag-and-drop */
+
   const onDragOver  = useCallback((e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); }, []);
   const onDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
@@ -248,7 +248,7 @@ function DiagnosisInner() {
     if (cameraRef.current) cameraRef.current.value = '';
   }, []);
 
-  /* analyze */
+
   const handleAnalyze = async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!textInput && !imageFile && !imageUrl) return;
@@ -259,8 +259,8 @@ function DiagnosisInner() {
       if (imageFile)     fd.append('image', imageFile);
       else if (imageUrl) fd.append('image_url', imageUrl);
 
-      /* parameter kebun — hanya dikirim bila diisi dan valid (> 0);
-         bila kosong backend memakai asumsi default yang terdokumentasi */
+
+
       (Object.keys(EMPTY_FARM) as (keyof FarmParams)[]).forEach(key => {
         const num = Number(farm[key].replace(',', '.'));
         if (farm[key].trim() !== '' && Number.isFinite(num) && num > 0) {
@@ -295,7 +295,7 @@ function DiagnosisInner() {
     <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
       <main className="flex-1 pt-[52px]">
 
-        {/* page header */}
+
         <div className="bg-white border-b border-gray-100/80">
           <div className="max-w-5xl mx-auto px-6 py-10">
             <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-2 animate-fade-in">
@@ -314,7 +314,7 @@ function DiagnosisInner() {
 
         <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
 
-          {/* error banner */}
+
           {error && (
             <div className="rounded-2xl bg-red-50 border border-red-100 px-5 py-4 text-sm text-red-700 flex items-start gap-3 animate-fade-in">
               <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -324,7 +324,7 @@ function DiagnosisInner() {
             </div>
           )}
 
-          {/* ══ INPUT FORM ════════════════════════════════════════════════ */}
+
           <div className="card-elevated rounded-3xl overflow-hidden animate-fade-up">
 
             <div className="px-5 sm:px-8 pt-8 pb-6 border-b border-gray-100/60">
@@ -334,15 +334,15 @@ function DiagnosisInner() {
 
             <form onSubmit={handleAnalyze} className="px-5 sm:px-8 py-8 space-y-8">
 
-              {/* ── Upload foto ── */}
+
               <div className="space-y-3">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-widest">
                   Foto Tanaman
                 </label>
 
-                {/* drag-drop zone with live preview */}
+
                 {imagePreview ? (
-                  /* preview state */
+
                   <div className="relative rounded-2xl overflow-hidden border border-gray-200 bg-gray-50">
                     <Image
                       src={imagePreview}
@@ -352,7 +352,7 @@ function DiagnosisInner() {
                       className="w-full h-56 object-cover"
                       unoptimized
                     />
-                    {/* overlay bar */}
+
                     <div className="absolute bottom-0 inset-x-0 bg-white/90 backdrop-blur-sm border-t border-gray-100 px-4 py-2.5 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-5 h-5 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
@@ -372,7 +372,7 @@ function DiagnosisInner() {
                     </div>
                   </div>
                 ) : (
-                  /* drop zone */
+
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={onDragOver}
@@ -413,7 +413,7 @@ function DiagnosisInner() {
                   </div>
                 )}
 
-                {/* action pills */}
+
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -435,7 +435,7 @@ function DiagnosisInner() {
                 <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={pickFile} />
               </div>
 
-              {/* ── Gejala textarea ── */}
+
               <div className="space-y-3">
                 <label htmlFor="symptom" className="block text-xs font-semibold text-gray-500 uppercase tracking-widest">
                   Keluhan / Gejala Tanaman
@@ -456,7 +456,7 @@ function DiagnosisInner() {
                 </div>
               </div>
 
-              {/* ── Parameter kebun (input rumus ROI) ── */}
+
               <div className="space-y-3">
                 <button
                   type="button"
@@ -507,7 +507,7 @@ function DiagnosisInner() {
                 )}
               </div>
 
-              {/* ── submit ── */}
+
               <button
                 type="submit"
                 disabled={!canSubmit}
@@ -527,7 +527,7 @@ function DiagnosisInner() {
               </button>
             </form>
 
-            {/* loading skeleton */}
+
             {loading && (
               <div className="px-5 sm:px-8 pb-8 animate-fade-in">
                 <div className="flex items-center gap-3 mb-4">
@@ -540,11 +540,11 @@ function DiagnosisInner() {
               </div>
             )}
 
-            {/* inline result preview */}
+
             {!loading && pendingResult && (
               <div className="px-5 sm:px-8 pb-8 animate-fade-up">
                 <div className="rounded-2xl border border-gray-100 bg-gray-50/60 overflow-hidden shadow-[var(--shadow-xs)]">
-                  {/* result header */}
+
                   <div className="bg-emerald-50 border-b border-emerald-100/60 px-5 py-3 flex items-center gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-emerald-600 shrink-0">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -594,10 +594,10 @@ function DiagnosisInner() {
             )}
           </div>
 
-          {/* ══ LOCAL HISTORY ═════════════════════════════════════════════ */}
+
           <div className="card-elevated rounded-3xl overflow-hidden animate-fade-up" style={{ animationDelay: '80ms' }}>
 
-            {/* section header */}
+
             <div className="px-5 sm:px-8 py-6 border-b border-gray-100/60 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="icon-tile w-8 h-8">
@@ -622,7 +622,7 @@ function DiagnosisInner() {
               )}
             </div>
 
-            {/* list */}
+
             {history.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-4 px-8">
                 <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
@@ -648,7 +648,7 @@ function DiagnosisInner() {
               </div>
             )}
 
-            {/* footer note */}
+
             {history.length > 0 && (
               <div className="px-8 py-4 border-t border-gray-100/60 bg-gray-50/40">
                 <p className="text-[11px] text-[var(--fg-tertiary)]">
@@ -661,7 +661,7 @@ function DiagnosisInner() {
         </div>
       </main>
 
-      {/* footer */}
+
       <footer className="py-8 border-t border-gray-100/80 bg-white mt-4">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">

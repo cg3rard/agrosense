@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 import routes.analyze as analyze_module
 from routes.analyze import FarmParams, _to_float, build_analyze_response, router
 
-# App minimal: hanya router /analyze, agar test tidak butuh koneksi Astra DB.
+
 app = FastAPI()
 app.include_router(router)
 
@@ -50,7 +50,7 @@ def test_status_llm_ditimpa_hasil_rumus():
 
     res = build_analyze_response(parsed, FarmParams(land_area_ha=0.5, yield_per_ha_kg=5000, price_per_kg=5000))
 
-    # R = 0,5 × 5000 × 5000 = 12.500.000; B = 12.500.000 × 10% × 50% = 625.000
+
     assert res.roi.revenue_potential == 12_500_000
     assert res.roi.benefit == 625_000
     assert res.roi.net_benefit == -19_375_000
@@ -93,7 +93,7 @@ def test_field_hilang_memakai_default_dan_tetap_valid():
     assert res.roi.formula
 
 
-# ── End-to-end lewat HTTP, Langflow dipalsukan ──────────────────────────────
+
 
 
 class _FakeResponse:
@@ -162,7 +162,7 @@ def test_endpoint_analyze_mengembalikan_rincian_roi(monkeypatch):
     assert res.status_code == 200, res.text
     body = res.json()
 
-    # R = 1 × 5000 × 6000 = 30.000.000; Lw = 7.500.000; B = 4.500.000
+
     assert body["roi"]["revenue_potential"] == 30_000_000
     assert body["roi"]["loss_if_untreated"] == 7_500_000
     assert body["roi"]["benefit"] == 4_500_000

@@ -41,12 +41,12 @@ export default function AppNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [lastPathname, setLastPathname] = useState(pathname);
 
-  /* exact match for '/', prefix match for all others */
+
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
-  /* auto-close mobile menu whenever the route changes — derived during render
-     (no effect) to avoid the extra render pass a useEffect + setState would cause */
+
+
   if (pathname !== lastPathname) {
     setLastPathname(pathname);
     if (menuOpen) setMenuOpen(false);
@@ -62,7 +62,7 @@ export default function AppNavbar() {
     >
       <div className="max-w-6xl mx-auto w-full px-6 h-[52px] flex items-center justify-between gap-4">
 
-        {/* ── Logo ── */}
+
         <Link
           href="/"
           className="flex items-center gap-2 shrink-0 group"
@@ -77,7 +77,7 @@ export default function AppNavbar() {
           <span className="text-sm font-semibold text-gray-900 tracking-tight">AgroSense</span>
         </Link>
 
-        {/* ── Desktop nav links ── */}
+
         <div className="hidden md:flex items-center gap-1">
           {NAV_LINKS.map(({ href, label }) => {
             const active = isActive(href);
@@ -108,7 +108,7 @@ export default function AppNavbar() {
           })}
         </div>
 
-        {/* ── CTA pill (desktop) + hamburger (mobile) ── */}
+
         <div className="flex items-center gap-2">
           <Link
             href="/diagnosis"
@@ -120,7 +120,7 @@ export default function AppNavbar() {
             Mulai Diagnosis <IconArrow />
           </Link>
 
-          {/* Mobile — hamburger / close toggle */}
+
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
@@ -135,7 +135,7 @@ export default function AppNavbar() {
 
       </div>
 
-      {/* ── Mobile menu panel ── */}
+
       {menuOpen && (
         <div
           className="md:hidden border-t border-black/5

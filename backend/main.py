@@ -4,9 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes.analyze import router as analyze_router
 from routes.finance import router as finance_router
 
-# ---------------------------------------------------------------------------
-# App
-# ---------------------------------------------------------------------------
+
+
+
 
 app = FastAPI(
     title="AgroSense API",
@@ -22,9 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------------
-# Routes
-# ---------------------------------------------------------------------------
+
+
+
 
 app.include_router(analyze_router)
 app.include_router(finance_router)

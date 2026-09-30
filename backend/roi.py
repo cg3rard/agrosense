@@ -44,28 +44,28 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
-# ── Asumsi default (dipakai bila petani tidak mengisi parameter kebun) ───────
-# Acuan: padi sawah skala petani kecil di Indonesia.
-DEFAULT_LAND_AREA_HA = 0.5  # ha — rata-rata luas garapan petani kecil
-DEFAULT_YIELD_PER_HA_KG = 5200.0  # kg/ha — produktivitas padi (GKP)
-DEFAULT_PRICE_PER_KG = 6500.0  # Rp/kg — harga gabah kering panen
-DEFAULT_YIELD_LOSS_RATIO = 0.30  # 30% hasil hilang bila serangan dibiarkan
-DEFAULT_EFFECTIVENESS_RATIO = 0.70  # 70% dari kerugian bisa diselamatkan
 
-# ── Ambang klasifikasi status ROI ───────────────────────────────────────────
-POSITIVE_ROI_THRESHOLD = 20.0  # persen
-NEGATIVE_ROI_THRESHOLD = 0.0  # persen
 
-# Biaya tindakan agronomis nyata (semprot, pupuk, tenaga kerja, dll) secara
-# realistis tidak pernah di bawah ini. Bila LLM mengembalikan cost_estimate
-# yang lebih kecil (mis. salah parsing satuan, atau echo "1" dari teks
-# "Rp 150.000/kg"), ROI% = net_benefit / cost × 100 meledak ke angka jutaan
-# persen karena membagi dengan nilai yang nyaris nol. Di bawah ambang ini,
-# cost dianggap belum tersedia dan dicatat sebagai asumsi, bukan dipakai
-# langsung sebagai pembagi.
-MIN_VALID_TREATMENT_COST = 10_000.0  # Rp
+DEFAULT_LAND_AREA_HA = 0.5
+DEFAULT_YIELD_PER_HA_KG = 5200.0
+DEFAULT_PRICE_PER_KG = 6500.0
+DEFAULT_YIELD_LOSS_RATIO = 0.30
+DEFAULT_EFFECTIVENESS_RATIO = 0.70
 
-RoiStatus = str  # "Positive" | "Neutral" | "Negative"
+
+POSITIVE_ROI_THRESHOLD = 20.0
+NEGATIVE_ROI_THRESHOLD = 0.0
+
+
+
+
+
+
+
+
+MIN_VALID_TREATMENT_COST = 10_000.0
+
+RoiStatus = str
 
 
 def _clamp_ratio(value: float) -> float:
@@ -191,28 +191,28 @@ def compute_roi(inputs: RoiInputs) -> RoiResult:
 
     cost_raw = float(inputs.treatment_cost or 0.0)
     if 0.0 < cost_raw < MIN_VALID_TREATMENT_COST:
-        # Biaya "recehan" tidak realistis untuk tindakan agronomis — kemungkinan
-        # salah parsing/satuan dari LLM. Perlakukan seolah biaya tidak diberikan
-        # agar tidak membagi dengan angka nyaris nol.
+
+
+
         assumed.append("treatment_cost")
         cost = 0.0
     else:
         cost = max(0.0, cost_raw)
 
-    # (1) … (5)
+
     revenue_potential = area * yield_kg * price
     loss_if_untreated = revenue_potential * loss_ratio
     loss_if_treated = loss_if_untreated * (1.0 - eff_ratio)
     benefit = loss_if_untreated - loss_if_treated
     net_benefit = benefit - cost
 
-    # (6) ROI dan (7) BCR — tidak terdefinisi bila biaya nol
+
     roi_percent = (net_benefit / cost * 100.0) if cost > 0 else 0.0
     bcr = (benefit / cost) if cost > 0 else 0.0
 
-    # (8) biaya maksimum agar tindakan masih break-even
+
     break_even_cost = benefit
-    # (9) kehilangan hasil minimum yang membenarkan biaya tersebut
+
     denominator = revenue_potential * eff_ratio
     break_even_loss_percent = (cost / denominator * 100.0) if denominator > 0 else 0.0
 

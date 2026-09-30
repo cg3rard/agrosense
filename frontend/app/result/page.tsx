@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import type { DiagnosisHistory, RoiBreakdown } from "@/types";
 import { useAgroSense } from "../context/agrosense";
 
-/* ── Icons ────────────────────────────────────────────────────────────────── */
+
 function IconHome() {
   return (
     <svg
@@ -191,12 +191,12 @@ function IconArrowRight() {  return (
   );
 }
 
-/* ── ROI status normalisation ────────────────────────────────────────────── */
+
 type RoiKind = "Positive" | "Negative" | "Neutral";
 
-/** Backend/LLM may return varying casings or synonyms — normalise to a known kind.
- *  Negasi ("tidak menguntungkan", "kurang baik") diperiksa lebih dulu agar tidak
- *  salah tertangkap oleh kata dasarnya. */
+
+
+
 function normalizeRoiStatus(raw: string): RoiKind {
   const v = raw.trim().toLowerCase();
   const negated = /\b(tidak|kurang|belum|non|not)\b/.test(v);
@@ -243,7 +243,7 @@ const ROI_META: Record<
   },
 };
 
-/* ── ROI Badge ────────────────────────────────────────────────────────────── */
+
 function RoiBadge({ status, large }: { status: string; large?: boolean }) {
   const kind = normalizeRoiStatus(status);
   const m = ROI_META[kind];
@@ -259,7 +259,7 @@ function RoiBadge({ status, large }: { status: string; large?: boolean }) {
   );
 }
 
-/* ── Action Step Row ──────────────────────────────────────────────────────── */
+
 function ActionStep({ n, text }: { n: number; text: string }) {
   return (
     <div className="flex items-start gap-3.5">
@@ -273,7 +273,7 @@ function ActionStep({ n, text }: { n: number; text: string }) {
   );
 }
 
-/* ── Metric Block ─────────────────────────────────────────────────────────── */
+
 function MetricBlock({
   label,
   icon,
@@ -299,7 +299,7 @@ function MetricBlock({
   );
 }
 
-/* ── Rincian perhitungan ROI ──────────────────────────────────────────────── */
+
 const rp = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
 const num = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 2 });
 
@@ -374,7 +374,7 @@ function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
       className="bg-white rounded-3xl border border-gray-100 shadow-[var(--shadow-card)] overflow-hidden animate-fade-up"
       style={{ animationDelay: "90ms" }}
     >
-      {/* header */}
+
       <div className="px-5 sm:px-8 py-6 border-b border-gray-100/70 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
           <div className="icon-tile w-9 h-9 shrink-0">
@@ -403,7 +403,7 @@ function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
         </div>
       </div>
 
-      {/* parameter yang dipakai */}
+
       <div className="px-5 sm:px-8 py-4 border-b border-gray-100/70 bg-gray-50/40 grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: "Luas lahan (A)", value: `${num(roi.land_area_ha)} ha` },
@@ -432,7 +432,7 @@ function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
         ))}
       </div>
 
-      {/* langkah perhitungan */}
+
       <div className="divide-y divide-gray-100/80">
         <FormulaRow
           label="Potensi pendapatan"
@@ -485,7 +485,7 @@ function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
         />
       </div>
 
-      {/* break-even + ambang klasifikasi */}
+
       <div className="px-5 sm:px-8 py-5 border-t border-gray-100/70 grid sm:grid-cols-2 gap-4">
         <div className="rounded-2xl border border-gray-100 bg-gray-50/60 px-4 py-3">
           <p className="text-[10px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-wider">
@@ -512,7 +512,7 @@ function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
         </div>
       </div>
 
-      {/* catatan asumsi */}
+
       <div className="px-5 sm:px-8 py-4 border-t border-gray-100/70 bg-gray-50/40 space-y-2">
         <p className="text-[11px] text-[var(--fg-tertiary)] leading-relaxed">
           Ambang status: ROI ≥ +20% <span className="font-medium">Menguntungkan</span>,
@@ -532,7 +532,7 @@ function RoiCalculationCard({ roi }: { roi: RoiBreakdown }) {
   );
 }
 
-/* ── Riwayat: satu baris hasil diagnosis sebelumnya ──────────────────────── */
+
 function formatHistoryDate(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
@@ -563,7 +563,7 @@ function HistoryRow({
         active ? "bg-[var(--brand-light)]/50" : "hover:bg-gray-50/80"
       }`}
     >
-      {/* thumbnail / fallback */}
+
       <div className="icon-tile w-10 h-10 shrink-0 overflow-hidden transition-transform duration-300 group-hover:scale-105">
         {entry.imageName ? (
           <span className="text-[10px] font-bold text-[var(--brand)] uppercase">
@@ -574,7 +574,7 @@ function HistoryRow({
         )}
       </div>
 
-      {/* info */}
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-sm font-semibold text-gray-900 truncate max-w-full">
@@ -601,7 +601,7 @@ function HistoryRow({
         </div>
       </div>
 
-      {/* meta */}
+
       <div className="flex items-center gap-3 shrink-0 self-center">
         <RoiBadge status={entry.result.roi_status} />
         <IconArrowRight />
@@ -610,7 +610,7 @@ function HistoryRow({
   );
 }
 
-/* ── Riwayat Diagnosis (list hasil sebelumnya) ───────────────────────────── */
+
 function HistorySection({
   history,
   hydrated,
@@ -629,7 +629,7 @@ function HistorySection({
       className="bg-white rounded-3xl border border-gray-100 shadow-[var(--shadow-card)] overflow-hidden animate-fade-up"
       style={{ animationDelay: "100ms" }}
     >
-      {/* header */}
+
       <div className="px-5 sm:px-8 py-6 border-b border-gray-100/70 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="icon-tile w-9 h-9 shrink-0">
@@ -657,7 +657,7 @@ function HistorySection({
         )}
       </div>
 
-      {/* body */}
+
       {!hydrated ? (
         <div className="divide-y divide-gray-100/80">
           {[0, 1, 2].map((i) => (
@@ -716,7 +716,7 @@ function HistorySection({
   );
 }
 
-/* ── Page inner ───────────────────────────────────────────────────────────── */
+
 function ResultInner() {
   const router = useRouter();
   const {
@@ -728,8 +728,8 @@ function ResultInner() {
     clearHistory,
   } = useAgroSense();
 
-  /* id riwayat yang sedang ditampilkan — diklik manual, atau dicocokkan
-     dengan hasil terakhir yang tersimpan di sesi ini */
+
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const activeId = useMemo(() => {
@@ -760,7 +760,7 @@ function ResultInner() {
     />
   );
 
-  /* Show a loading pulse while the context re-syncs with sessionStorage on mount */
+
   if (!resultHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
@@ -787,7 +787,7 @@ function ResultInner() {
     );
   }
 
-  /* No result stored for this session — show an empty state instead of redirecting */
+
   if (!latestResult) {
     return (
       <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
@@ -815,7 +815,7 @@ function ResultInner() {
               </button>
             </div>
 
-            {/* ══ RIWAYAT HASIL SEBELUMNYA ═══════════════════════════════ */}
+
             {historySection}
           </div>
         </main>
@@ -823,7 +823,7 @@ function ResultInner() {
     );
   }
 
-  /* ── derived visual tokens from ROI ── */
+
   const roiKind = normalizeRoiStatus(latestResult.roi_status);
   const roiMeta = ROI_META[roiKind];
 
@@ -841,7 +841,7 @@ function ResultInner() {
         ? "bg-red-50 border-red-100"
         : "bg-gray-50 border-gray-100";
 
-  /* split recommended_action into numbered steps for better readability */
+
   const actionSteps = latestResult.recommended_action
     .split(/(?:\.\s+|\n+)/)
     .map((s) => s.trim())
@@ -850,7 +850,7 @@ function ResultInner() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
       <main className="flex-1 pt-[52px]">
-        {/* ── Page header ───────────────────────────────────────────────── */}
+
         <div className="bg-white border-b border-gray-100/80">
           <div className="max-w-5xl mx-auto px-6 py-10">
             <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-2 animate-fade-in">
@@ -870,12 +870,12 @@ function ResultInner() {
         </div>
 
         <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
-          {/* ══ RESULT CARD ══════════════════════════════════════════════ */}
+
           <div
             className={`bg-gradient-to-b ${headerAccent} rounded-3xl shadow-[var(--shadow-float)] border border-gray-100 overflow-hidden animate-fade-up`}
             style={{ animationDelay: "60ms" }}
           >
-            {/* ── Card header: diagnosis title + ROI badge ── */}
+
             <div className="px-5 sm:px-8 pt-8 pb-6 border-b border-gray-100/70 flex flex-col gap-4">
               <div className="flex items-center gap-2">
                 <div className="icon-tile w-8 h-8 shrink-0">
@@ -896,7 +896,7 @@ function ResultInner() {
             </div>
 
             <div className="px-5 sm:px-8 py-8 space-y-8">
-              {/* ── Rekomendasi Tindakan ── */}
+
               <div>
                 <p className="text-[11px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-widest mb-4">
                   Rekomendasi Tindakan
@@ -914,7 +914,7 @@ function ResultInner() {
                 </div>
               </div>
 
-              {/* ── Item / Produk ── */}
+
               <div>
                 <p className="text-[11px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-widest mb-3">
                   Item / Produk yang Diperlukan
@@ -950,13 +950,13 @@ function ResultInner() {
                 </div>
               </div>
 
-              {/* ── Finansial & ROI ── */}
+
               <div>
                 <p className="text-[11px] font-semibold text-[var(--fg-tertiary)] uppercase tracking-widest mb-3">
                   Finansial &amp; ROI
                 </p>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {/* Estimasi Biaya */}
+
                   <MetricBlock label="Estimasi Biaya" icon={<IconWallet />}>
                     <p className="text-2xl font-bold text-gray-900 tabular-nums tracking-tight">
                       Rp {latestResult.cost_estimate.toLocaleString("id-ID")}
@@ -966,7 +966,7 @@ function ResultInner() {
                     </p>
                   </MetricBlock>
 
-                  {/* ROI Status */}
+
                   <div
                     className={`rounded-2xl border px-6 py-5 flex items-start gap-4 shadow-[var(--shadow-card)] transition-shadow duration-300 ${roiAccent}`}
                     style={{ transitionTimingFunction: "var(--ease-out)" }}
@@ -1001,7 +1001,7 @@ function ResultInner() {
             </div>
           </div>
 
-          {/* ══ RINCIAN PERHITUNGAN ROI ═════════════════════════════════ */}
+
           {latestResult.roi ? (
             <RoiCalculationCard roi={latestResult.roi} />
           ) : (
@@ -1017,10 +1017,10 @@ function ResultInner() {
             </div>
           )}
 
-          {/* ══ RIWAYAT HASIL SEBELUMNYA ═══════════════════════════════ */}
+
           {historySection}
 
-          {/* ══ BOTTOM NAVIGATION ═══════════════════════════════════════ */}
+
           <div
             className="grid sm:grid-cols-2 gap-3 animate-fade-up"
             style={{ animationDelay: "120ms" }}
@@ -1045,7 +1045,7 @@ function ResultInner() {
         </div>
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────────────── */}
+
       <footer className="py-8 border-t border-gray-100/80 bg-white mt-4">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">

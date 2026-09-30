@@ -1,26 +1,26 @@
-# Git
+# This file applies only when the repository root is used as Docker build context.
+# Compose currently builds from ./backend and ./frontend; keep service-specific
+# .dockerignore files in those directories when adding sensitive or large files.
 .git
 .gitignore
 
-# Bob / editor artefacts
 .bob
 
-# Python
+# Python cache and local environment files must never enter an image.
 **/__pycache__
 **/*.pyc
 **/*.pyo
 **/.env
 backend/.env
 
-# Node
+# Frontend dependencies and build output are recreated inside the image.
 frontend/node_modules
 frontend/.next
 frontend/.next/cache
 
-# Dev-only Docker files (excluded from production build context)
+# Development-only Docker definitions are not needed in production context.
 **/Dockerfile.dev
 docker-compose.dev.yml
 
-# Misc
 **/*.log
 *.md

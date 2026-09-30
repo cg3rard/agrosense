@@ -1,22 +1,9 @@
-
-# docker-compose.dev.yml — Development stack with live reload
-# ─────────────────────────────────────────────────────────────
-# Usage:
-#   docker compose -f docker-compose.dev.yml up --build
-#
-# How hot-reload works:
-#   • Backend  — uvicorn --reload watches /app (bind-mounted from ./backend).
-#                Edit any .py file on the host → uvicorn restarts automatically.
-#   • Frontend — Next.js dev server (npm run dev) with HMR.
-#                Edit any .tsx/.ts/.css file on the host → browser hot-reloads.
-#
-# node_modules isolation:
-#   The anonymous volume `frontend_nm` shadows ./frontend/node_modules inside
-#   the container so the host folder is never used or overwritten.
-
+# Development stack with backend auto-reload and frontend HMR.
+# Prerequisite: copy backend/.env.example to backend/.env and fill all required values.
+# Start: docker compose -f docker-compose.dev.yml up --build
+# Stop:  docker compose -f docker-compose.dev.yml down
+# Access: frontend http://localhost:3000 | API docs http://localhost:8000/docs
 services:
-
-  # ── FastAPI backend — auto-reload via uvicorn --reload ──────────────────────
   backend:
     build:
       context: ./backend
@@ -25,10 +12,10 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
-    # Mount source code so uvicorn --reload picks up every file change.
+    # Bind-mount source so uvicorn --reload sees host-side Python changes.
     volumes:
       - ./backend:/app
-    # Allow backend to reach Langflow running on the host machine.
+    # Allows the backend to reach Langflow running on the host machine.
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -39,7 +26,6 @@ services:
       retries: 5
       start_period: 10s
 
-  # ── Next.js frontend — HMR via npm run dev ──────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -48,21 +34,18 @@ services:
       - "3000:3000"
     environment:
       BACKEND_URL: http://backend:8000
-      # Tell Next.js dev server to accept connections from all hosts inside Docker.
       HOSTNAME: "0.0.0.0"
-      # Bind-mounted volumes on Windows/macOS don't always propagate native
-      # filesystem change events reliably into the Linux container, which can
-      # make hot-reload feel slow or inconsistent. Force polling every 100ms
-      # as a fast, reliable fallback so file edits are always picked up.
+      # Polling makes bind-mounted file changes reliable on Docker Desktop
+      # for Windows/macOS, where native filesystem events may be missed.
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: "100"
     volumes:
-      # Bind-mount source so HMR sees every file change on the host.
+      # Application source for Next.js hot module replacement.
       - ./frontend:/app
-      # Isolate node_modules: container's copy wins over the host bind-mount.
+      # Keep Linux container dependencies separate from host node_modules.
       - frontend_nm:/app/node_modules
-      # Persist the Next.js build cache across restarts for faster rebuilds.
+      # Persist the Next.js incremental cache between container restarts.
       - frontend_next:/app/.next
     depends_on:
       backend:
@@ -70,7 +53,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  # Anonymous volume that keeps node_modules inside the container only.
   frontend_nm:
-  # Named volume for Next.js incremental build cache (speeds up HMR cold-start).
   frontend_next:

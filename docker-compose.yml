@@ -1,17 +1,21 @@
+# Production-like stack.
+# Prerequisite: copy backend/.env.example to backend/.env and fill all required values.
+# Start:    docker compose up --build
+# Detached: docker compose up --build -d
+# Stop:     docker compose down
+# Access:   frontend http://localhost:3000 | API docs http://localhost:8000/docs
 services:
-
-  # ── FastAPI backend ───────────────────────────────────────────────────────
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    # Secrets and service URLs are loaded at runtime, not declared in Compose.
     env_file:
-      - ./backend/.env          # copy backend/.env.example → backend/.env and fill in values
-    # Allows the container to reach Langflow running on the host machine.
-    # On Linux, Docker Desktop is not available so host.docker.internal must be mapped manually.
-    # On Mac/Windows with Docker Desktop this mapping already exists; the extra_hosts entry is harmless.
+      - ./backend/.env
+    # Allows a container to reach Langflow running on the host. For a containerized
+    # Langflow service, point LANGFLOW_API_URL to its Compose service name instead.
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -22,7 +26,6 @@ services:
       retries: 3
       start_period: 15s
 
-  # ── Next.js frontend ─────────────────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -30,8 +33,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      # Points the Next.js API proxy routes at the backend container
+      # Compose DNS resolves "backend" from the Next.js server container.
       BACKEND_URL: http://backend:8000
+    # Do not start the frontend until the backend healthcheck succeeds.
     depends_on:
       backend:
         condition: service_healthy

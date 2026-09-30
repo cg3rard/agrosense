@@ -1,18 +1,13 @@
-# ── Dev image: Node + npm run dev (Next.js HMR) ──────────────────────────────
-# node_modules live inside the container only (anonymous volume declared in
-# docker-compose.dev.yml) so the host's node_modules folder is never shadowed.
-# Source code is mounted as a bind-volume from ./frontend → /app.
+# Development image; docker-compose.dev.yml bind-mounts frontend source at /app.
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies from lock-file into the container layer.
-# The host bind-mount will overlay the rest of /app, but node_modules is
-# protected by the anonymous volume declared in docker-compose.dev.yml.
+# Dependencies stay in the frontend_nm Docker volume instead of host node_modules.
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 EXPOSE 3000
 
-# Next.js dev server with HMR; Turbopack is opt-in via --turbopack flag.
+# Start the Next.js development server with hot module replacement.
 CMD ["npm", "run", "dev"]

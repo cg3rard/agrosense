@@ -5,7 +5,7 @@ import Image from 'next/image';
 import type { FinanceEntryResponse, FinanceEntryType } from '@/types';
 import Reveal from '@/components/Reveal';
 
-/* ── Icons ────────────────────────────────────────────────────────────────── */
+
 function IconWallet() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
@@ -45,7 +45,7 @@ function Spinner() {
   );
 }
 
-/* ── Highlight summary card ──────────────────────────────────────────────── */
+
 function SummaryCard({
   label, amount, icon, tone,
 }: {
@@ -80,7 +80,7 @@ function SummaryCard({
   );
 }
 
-/* ── Entry row ────────────────────────────────────────────────────────────── */
+
 function EntryRow({ entry }: { entry: FinanceEntryResponse }) {
   const isIncome = entry.type === 'income';
   return (
@@ -103,7 +103,7 @@ function EntryRow({ entry }: { entry: FinanceEntryResponse }) {
   );
 }
 
-/* ── Page ─────────────────────────────────────────────────────────────────── */
+
 export default function KeuanganPage() {
   const [entries, setEntries] = useState<FinanceEntryResponse[]>([]);
   const [loadingList, setLoadingList] = useState(true);
@@ -177,7 +177,7 @@ export default function KeuanganPage() {
     <div className="min-h-screen flex flex-col bg-[var(--bg-page)]">
       <main className="flex-1 pt-[52px]">
 
-        {/* ── Page header ── */}
+
         <div className="bg-white border-b border-gray-100/80">
           <div className="max-w-5xl mx-auto px-6 py-10">
             <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-widest mb-2">
@@ -194,14 +194,14 @@ export default function KeuanganPage() {
 
         <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
 
-          {/* ══ SUMMARY HIGHLIGHT ══════════════════════════════════════ */}
+
           <Reveal className="grid sm:grid-cols-3 gap-4">
             <SummaryCard label="Total Pemasukan" amount={totalIncome} icon={<IconArrowUp />} tone="income" />
             <SummaryCard label="Total Pengeluaran" amount={totalExpense} icon={<IconArrowDown />} tone="expense" />
             <SummaryCard label="Saldo" amount={balance} icon={<IconScale />} tone="balance" />
           </Reveal>
 
-          {/* ══ FORM ═══════════════════════════════════════════════════ */}
+
           <Reveal delayMs={80} className="card-elevated rounded-3xl overflow-hidden">
             <div className="px-5 sm:px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
               <div className="icon-tile w-8 h-8 shrink-0">
@@ -217,7 +217,7 @@ export default function KeuanganPage() {
                 </div>
               )}
 
-              {/* type toggle */}
+
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
@@ -296,7 +296,7 @@ export default function KeuanganPage() {
             </form>
           </Reveal>
 
-          {/* ══ RIWAYAT TRANSAKSI ══════════════════════════════════════ */}
+
           <Reveal delayMs={160} className="card-elevated rounded-3xl overflow-hidden">
             <div className="px-5 sm:px-8 pt-7 pb-5 border-b border-gray-100/60 flex items-center gap-3">
               <div className="icon-tile w-8 h-8 shrink-0">
@@ -353,7 +353,7 @@ export default function KeuanganPage() {
         </div>
       </main>
 
-      {/* ── Footer ── */}
+
       <footer className="py-8 border-t border-gray-100/80 bg-white mt-4">
         <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">

@@ -3,7 +3,7 @@ import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import ScrollToTop from "@/components/ScrollToTop";
 
-/* ── inline SVG icons ────────────────────────────────────────────────────── */
+
 function IconLeaf() {
   return (
     <svg
@@ -107,7 +107,7 @@ function IconSync() {
   );
 }
 
-/* ── stat card ───────────────────────────────────────────────────────────── */
+
 function StatCard({
   value,
   label,
@@ -141,15 +141,15 @@ function StatCard({
   );
 }
 
-/* ── page ────────────────────────────────────────────────────────────────── */
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <ScrollToTop />
       <main className="flex-1">
-        {/* ══ HERO — full-bleed photo banner with glass overlay ══════════ */}
+
         <section className="relative overflow-hidden pt-[52px]">
-          {/* background photo — farmers working in the field */}
+
           <div
             aria-hidden
             className="absolute inset-0 bg-cover bg-center scale-105 animate-[heroZoom_20s_ease-in-out_infinite_alternate]"
@@ -158,7 +158,7 @@ export default function LandingPage() {
                 "url('https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=2069&auto=format&fit=crop')",
             }}
           />
-          {/* dark gradient wash for legibility */}
+
           <div
             aria-hidden
             className="absolute inset-0"
@@ -167,7 +167,7 @@ export default function LandingPage() {
                 "linear-gradient(180deg, rgba(10,20,15,0.55) 0%, rgba(10,20,15,0.35) 45%, rgba(10,20,15,0.75) 100%)",
             }}
           />
-          {/* ambient brand-tinted glow */}
+
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0"
@@ -179,7 +179,7 @@ export default function LandingPage() {
 
           <div className="relative min-h-[640px] sm:min-h-[720px] flex items-center justify-center">
             <div className="max-w-4xl mx-auto px-6 py-10 text-center">
-              {/* heading + subtitle wrapped in a large glass panel */}
+
               <div
                 className="glass-panel-dark rounded-[2.5rem] px-6 sm:px-14 py-8 sm:py-11 animate-fade-up"
                 style={{ animationDelay: "60ms" }}
@@ -201,7 +201,7 @@ export default function LandingPage() {
                   ROI—semuanya dalam satu platform.
                 </p>
 
-                {/* CTAs */}
+
                 <div
                   className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 animate-fade-up"
                   style={{ animationDelay: "120ms" }}
@@ -224,7 +224,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ PROBLEM STATEMENT ═══════════════════════════════════════ */}
+
         <section id="masalah" className="bg-[var(--bg-page)] py-28">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal className="max-w-2xl mb-16">
@@ -316,7 +316,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ FEATURES ════════════════════════════════════════════════ */}
+
         <section id="fitur" className="bg-white py-28">
           <div className="max-w-6xl mx-auto px-6">
             <Reveal className="text-center max-w-2xl mx-auto mb-16">
@@ -332,7 +332,7 @@ export default function LandingPage() {
               </p>
             </Reveal>
 
-            {/* feature cards — exactly as spec: border border-gray-100 bg-white/80 backdrop-blur rounded-3xl p-8 shadow-sm */}
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
                 {
@@ -379,7 +379,7 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* how it works */}
+
             <Reveal className="mt-20 bg-[var(--bg-page)] rounded-3xl p-10 sm:p-14">
               <div id="cara-kerja">
                 <p className="text-caption text-center mb-10">
@@ -427,7 +427,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ FINAL CTA ═══════════════════════════════════════════════ */}
+
         <section
           className="py-28"
           style={{
@@ -460,7 +460,7 @@ export default function LandingPage() {
 
       <footer className="bg-white border-t border-[var(--border-subtle)] py-12">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* brand */}
+
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-lg overflow-hidden shrink-0">
               <Image
@@ -475,7 +475,7 @@ export default function LandingPage() {
               AgroSense
             </span>
           </div>
-          {/* links */}
+
           <div className="flex items-center gap-5 text-xs text-[var(--fg-tertiary)]">
             <a
               href="#masalah"
@@ -499,7 +499,7 @@ export default function LandingPage() {
               Diagnosis
             </Link>
           </div>
-          {/* copyright */}
+
           <p className="text-xs text-[var(--fg-tertiary)] tracking-wide">
             &copy; {new Date().getFullYear()} AgroSense
           </p>

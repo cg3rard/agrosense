@@ -1,10 +1,10 @@
 export type RoiStatus = 'Positive' | 'Neutral' | 'Negative';
 
-/**
- * Rincian perhitungan ROI dari backend (backend/roi.py).
- * Rumus: R = A×Y×P; Lw = R×L; Lt = Lw×(1−E); B = Lw−Lt;
- *        N = B−C; ROI% = N/C×100; BCR = B/C
- */
+
+
+
+
+
 export interface RoiBreakdown {
   status: RoiStatus;
   roi_percent: number;
@@ -31,11 +31,11 @@ export interface AnalyzeResponse {
   recommended_action: string;
   cost_estimate: number;
   roi_status: string;
-  /** Opsional: hasil lama di localStorage belum punya field ini. */
+
   roi?: RoiBreakdown;
 }
 
-/** Parameter kebun yang dipakai sebagai input rumus ROI. */
+
 export interface FarmParams {
   land_area_ha: string;
   yield_per_ha_kg: string;
